@@ -132,6 +132,7 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                                 <th className="px-4 py-3 font-bold">{isProduct ? "کد" : "نوع / توضیحات"}</th>
                                 {isProduct && <th className="px-4 py-3 font-bold">تولید استاندارد/ساعت</th>}
                                 {isProduct && <th className="px-4 py-3 font-bold">ضایعات استاندارد/ساعت</th>}
+                                {isProduct && <th className="px-4 py-3 font-bold">قیمت واحد</th>}
                                 <th className="px-4 py-3 font-bold">وضعیت</th>
                                 <th className="px-4 py-3" />
                             </tr>
@@ -160,6 +161,11 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                                     {isProduct && (
                                         <td className="px-4 py-3 font-bold text-red-500">
                                             {formatProductionInteger((it as Product).std_waste_per_hour)}
+                                        </td>
+                                    )}
+                                    {isProduct && (
+                                        <td className="px-4 py-3 font-bold text-gray-700 dark:text-gray-200">
+                                            {formatProductionInteger(Number((it as Product).unit_price ?? 0))}
                                         </td>
                                     )}
                                     <td className="px-4 py-3">

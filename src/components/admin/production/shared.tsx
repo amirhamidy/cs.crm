@@ -92,6 +92,7 @@ export interface Product {
     code: string;
     std_production_per_hour: string;
     std_waste_per_hour: string;
+    unit_price?: string | null;
     is_active: boolean;
 }
 
@@ -1747,6 +1748,7 @@ export function CatalogModal({
     const [description, setDescription] = useState((item as Cause | null)?.description ?? "");
     const [stdProd, setStdProd] = useState((item as Product | null)?.std_production_per_hour ?? "");
     const [stdWaste, setStdWaste] = useState((item as Product | null)?.std_waste_per_hour ?? "0");
+    const [unitPrice, setUnitPrice] = useState(String(Number((item as Product | null)?.unit_price ?? 0) || ""));
     const [causeKind, setCauseKind] = useState<CauseKind>((item as Cause | null)?.kind ?? "waste");
     const [isActive, setIsActive] = useState(item?.is_active ?? true);
     const [saving, setSaving] = useState(false);
@@ -1759,7 +1761,7 @@ export function CatalogModal({
         setSaving(true);
         setError("");
         const payload = isProduct
-            ? { name: name.trim(), code: code.trim(), std_production_per_hour: stdProd, std_waste_per_hour: stdWaste || "0", is_active: isActive }
+            ? { name: name.trim(), code: code.trim(), std_production_per_hour: stdProd, std_waste_per_hour: stdWaste || "0", unit_price: unitPrice === "" ? "0" : unitPrice, is_active: isActive }
             : { kind: causeKind, name: name.trim(), description: description.trim(), is_active: isActive };
         try {
             if (item) {
@@ -1822,6 +1824,14 @@ export function CatalogModal({
                             min="0"
                         />
                     </div>
+                    <NumberField
+                        label="قیمت واحد (اختیاری)"
+                        value={unitPrice}
+                        displayValue={unitPrice !== "" && Number.isFinite(Number(unitPrice)) ? String(Number(unitPrice)) : ""}
+                        onChange={setUnitPrice}
+                        step="0.01"
+                        min="0"
+                    />
                 </>
             ) : (
                 <>

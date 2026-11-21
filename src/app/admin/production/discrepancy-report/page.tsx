@@ -5,6 +5,7 @@ import { formatProductionInteger, formatProductionPercent, formatProductionHours
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, AlertTriangle, BarChart3, Gauge } from "lucide-react";
 import { useTheme } from "next-themes";
+import HighlightsDowntime from "@/components/admin/production/HighlightsDowntime";
 import ParetoChart from "@/components/charts/ParetoChart";
 import ProductionBarChart from "@/components/charts/ProductionBarChart";
 import axiosInstance from "@/lib/axiosInstance";
@@ -40,7 +41,15 @@ interface DiscrepancyItem {
     totals: CauseMetrics;
 }
 
+interface CauseChart {
+    labels: string[];
+    values: number[];
+    percents: (number | null)[];
+    cumulative_percents: (number | null)[];
+}
+
 interface DiscrepancyReport {
+    chart?: CauseChart;
     kind: "waste" | "breakdown";
     date_from: string;
     date_to: string;
@@ -106,18 +115,14 @@ export default function DiscrepancyReportPage() {
     }, [span, machineId, productId, causeKind]);
 
     const data = useMemo(() => {
-        const shares: number[] = [];
-        return (report?.items ?? []).map((item) => {
-            shares.push(item.share_percent ?? 0);
-            return {
-                name: item.cause_name,
-                waste: causeKind === "waste"
-                    ? item.totals.waste ?? 0
-                    : item.totals.downtime_minutes ?? 0,
-                cumulative: Math.round(sumProductionDecimals(shares)),
-            };
-        });
-    }, [report, causeKind]);
+        const c = report?.chart;
+        if (!c) return [];
+        return c.labels.map((name, i) => ({
+            name,
+            waste: Number(c.values[i] ?? 0),
+            cumulative: Math.round(Number(c.cumulative_percents[i] ?? 0)),
+        }));
+    }, [report]);
 
     return (
         <section className="space-y-4">
@@ -192,6 +197,7 @@ export default function DiscrepancyReportPage() {
                 </div>
             ) : report ? (
                 <div className="space-y-4">
+                    <HighlightsDowntime dateFrom={report.date_from} dateTo={report.date_to} machineId={machineId} productId={productId} />
                     {causeKind === "waste" ? (
                         <>
                             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
