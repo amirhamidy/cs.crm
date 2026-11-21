@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "generate:modules": "node scripts/generate-module-routes.mjs",
-    "check:modules": "node scripts/check-boundaries.mjs",
+    "check:isolation": "node scripts/check-module-isolation.mjs",
     "predev": "npm run generate:modules",
-    "prebuild": "npm run generate:modules && npm run check:modules"
+    "prebuild": "npm run generate:modules && npm run check:isolation"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

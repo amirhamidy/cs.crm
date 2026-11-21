@@ -54,4 +54,4 @@ for (const mod of fs
 }
 
 if (bad) process.exit(1);
-console.log("[boundaries] ok");
+console.log("[isolation] ok");
