@@ -7,10 +7,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "sync:modules": "node scripts/sync-modules.mjs",
+    "generate:modules": "node scripts/generate-module-routes.mjs",
     "check:modules": "node scripts/check-boundaries.mjs",
-    "predev": "npm run sync:modules",
-    "prebuild": "npm run sync:modules && npm run check:modules"
+    "predev": "npm run generate:modules",
+    "prebuild": "npm run generate:modules && npm run check:modules"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
