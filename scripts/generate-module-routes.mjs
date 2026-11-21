@@ -99,7 +99,7 @@ for (const m of enabled) {
 fs.writeFileSync(STATE, JSON.stringify(written, null, 1));
 
 const out = `${MARK}
-import type { ModuleManifest } from "@/core/modules/types";
+import type { ModuleManifest } from "@/core/types";
 ${enabled
   .map((m, i) => `import m${i} from "@/modules/${m}/manifest";`)
   .join("\n")}

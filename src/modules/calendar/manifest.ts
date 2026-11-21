@@ -1,4 +1,4 @@
-import type { ModuleManifest } from "@/core/modules/types";
+import type { ModuleManifest } from "@/core/types";
 
 const manifest: ModuleManifest = {
     id: "calendar",
