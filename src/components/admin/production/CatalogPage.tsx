@@ -22,13 +22,14 @@ import {
 
 type Item = Product | Cause;
 
-type CatalogFilters = { kind?: string };
+type CatalogFilters = { kind?: string; is_active?: string };
 
 const PAGE_SIZE = 12;
 
 export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
     const isProduct = kind === "product";
     const [causeFilter, setCauseFilter] = useState<"all" | CauseKind>("all");
+    const [activeFilter, setActiveFilter] = useState<"all" | "true" | "false">("all");
     const [error, setError] = useState("");
     const [busyId, setBusyId] = useState<number | null>(null);
     const [modal, setModal] = useState<{ open: boolean; item: Item | null }>({ open: false, item: null });
@@ -42,7 +43,12 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
 
     function changeCauseFilter(v: "all" | CauseKind) {
         setCauseFilter(v);
-        list.setFilters({ kind: v === "all" ? undefined : v });
+        list.setFilters({ kind: v === "all" ? undefined : v, is_active: activeFilter === "all" ? undefined : activeFilter });
+    }
+
+    function changeActiveFilter(v: "all" | "true" | "false") {
+        setActiveFilter(v);
+        list.setFilters({ kind: causeFilter === "all" ? undefined : causeFilter, is_active: v === "all" ? undefined : v });
     }
 
     async function toggle(it: Item) {
@@ -116,6 +122,23 @@ export default function CatalogPage({ kind }: { kind: "product" | "cause" }) {
                     ))}
                 </div>
             )}
+
+            <div className="flex flex-wrap gap-2">
+                {([["all", "همه وضعیت‌ها"], ["true", "فعال"], ["false", "غیرفعال"]] as const).map(([v, label]) => (
+                    <button
+                        key={v}
+                        type="button"
+                        onClick={() => changeActiveFilter(v)}
+                        className={`h-8 rounded-full px-3.5 text-[12px] font-bold transition-colors ${
+                            activeFilter === v
+                                ? "bg-emerald-600 text-white"
+                                : "bg-black/[0.04] text-gray-600 hover:bg-black/[0.07] dark:bg-white/[0.06] dark:text-gray-300"
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
 
             <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#fafafa] dark:border-white/[0.06] dark:bg-white/[0.02]">
                 {loading ? (

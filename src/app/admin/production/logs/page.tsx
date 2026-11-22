@@ -63,6 +63,7 @@ export default function LogsPage() {
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
     const [search, setSearch] = useState("");
+    const [ordering, setOrdering] = useState("");
 
     const debouncedSearch = useDebounced(search);
 
@@ -81,6 +82,7 @@ export default function LogsPage() {
             breakdown_cause_id: filterBreakdownCauseId ?? undefined,
             date_from: filterDateFrom || undefined,
             date_to: filterDateTo || undefined,
+            ordering: ordering || undefined,
         }, controller.signal)
             .then((response) => {
                 setLogs(response.results);
@@ -96,7 +98,7 @@ export default function LogsPage() {
                 if (!controller.signal.aborted) setLoading(false);
             });
         return () => controller.abort();
-    }, [page, debouncedSearch, filterEmployeeId, filterMachineId, filterProductId, filterWasteCauseId, filterBreakdownCauseId, filterDateFrom, filterDateTo, refreshVersion]);
+    }, [page, debouncedSearch, filterEmployeeId, filterMachineId, filterProductId, filterWasteCauseId, filterBreakdownCauseId, filterDateFrom, filterDateTo, ordering, refreshVersion]);
 
     const pageCount = Math.max(1, Math.ceil(totalLogs / pageSize));
 
@@ -209,22 +211,34 @@ export default function LogsPage() {
                     <table className="w-full min-w-[1400px] border-collapse text-right text-[12px]">
                         <thead>
                             <tr className="border-b border-black/5 text-[11px] text-gray-400 dark:border-white/5">
-                                {[
-                                    "تاریخ",
-                                    "پرسنل",
-                                    "ماشین",
-                                    "محصول",
-                                    "علت",
-                                    "ساعت کار",
-                                    "تولید",
-                                    "انتظاری",
-                                    "ضایعات",
-                                    "انتظاری",
-                                    "راندمان",
-                                    "",
-                                ].map((h, i) => (
+                                {([
+                                    ["تاریخ", "date"],
+                                    ["پرسنل", "employee"],
+                                    ["ماشین", "machine"],
+                                    ["محصول", "product"],
+                                    ["علت", ""],
+                                    ["ساعت کار", "hours"],
+                                    ["تولید", "produced"],
+                                    ["انتظاری", ""],
+                                    ["ضایعات", "waste"],
+                                    ["انتظاری", ""],
+                                    ["راندمان", ""],
+                                    ["", ""],
+                                ] as const).map(([h, key], i) => (
                                     <th key={i} className="whitespace-nowrap px-4 py-3 font-bold">
-                                        {h}
+                                        {key ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOrdering(ordering === key ? `-${key}` : ordering === `-${key}` ? "" : key);
+                                                    setPage(1);
+                                                }}
+                                                className="flex items-center gap-1 hover:text-gray-600"
+                                            >
+                                                {h}
+                                                <span className="text-[10px]">{ordering === key ? "▲" : ordering === `-${key}` ? "▼" : "↕"}</span>
+                                            </button>
+                                        ) : h}
                                     </th>
                                 ))}
                             </tr>

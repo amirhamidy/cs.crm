@@ -168,7 +168,7 @@ export default function VariancePage() {
 
             {data && data[focus] && (() => {
                 const t = data[focus]!.totals;
-                const eff = t?.expected_production ? (t.produced / t.expected_production) * 100 : null;
+                const eff = Number(t?.expected_production) ? (Number(t.produced) / Number(t.expected_production)) * 100 : null;
                 const cards = [
                     { l: "ساعت کار", v: formatProductionHours(t?.hours), i: <Clock size={14} />, c: "text-gray-500 bg-gray-500/10" },
                     { l: "تولید", v: fmt(t?.produced), i: <Factory size={14} />, c: "text-blue-500 bg-blue-500/10" },

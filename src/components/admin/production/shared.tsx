@@ -108,6 +108,7 @@ export interface Cause {
 }
 
 export interface EmployeeItem {
+    is_active?: boolean;
     id: number;
     full_name: string;
     username: string;
@@ -1315,7 +1316,7 @@ export function LogModal({
         let alive = true;
         listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
             .then((all) => {
-                if (alive) setEmployees(all);
+                if (alive) setEmployees(all.filter((e) => e.is_active !== false || e.id === log?.employee));
             })
             .catch(() => {
                 if (alive) setError("دریافت لیست کارمندان انجام نشد");

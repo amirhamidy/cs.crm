@@ -129,7 +129,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={toPersianDigits(monthlyReport.totals.produced.toLocaleString())}
+                            value={formatProductionInteger(monthlyReport.totals.produced)}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -143,7 +143,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={toPersianDigits(monthlyReport.totals.waste.toLocaleString())}
+                            value={formatProductionInteger(monthlyReport.totals.waste)}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -289,7 +289,7 @@ export default function MonthlyPage() {
                                                                 {formatProductionLogHours(d.hours, d.start_time, d.end_time)}
                                                             </td>
                                                             <td className="px-2 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                                {toPersianDigits(d.produced.toLocaleString())}
+                                                                {formatProductionInteger(d.produced)}
                                                             </td>
                                                             <td className="px-2 py-2 text-gray-400">
                                                                 {formatProductionInteger(d.expected_production)}

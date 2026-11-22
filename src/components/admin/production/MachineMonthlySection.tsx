@@ -161,7 +161,7 @@ export default function MachineMonthlySection() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={toPersianDigits(machineMonthlyReport.totals.produced.toLocaleString())}
+                            value={formatProductionInteger(machineMonthlyReport.totals.produced)}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -175,7 +175,7 @@ export default function MachineMonthlySection() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={toPersianDigits(machineMonthlyReport.totals.waste.toLocaleString())}
+                            value={formatProductionInteger(machineMonthlyReport.totals.waste)}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -313,7 +313,7 @@ export default function MachineMonthlySection() {
                                                             {pr.product_code && <span className="mr-1 font-mono text-[10px] font-normal text-gray-400">({pr.product_code})</span>}
                                                         </td>
                                                         <td className="whitespace-nowrap px-3 py-2 text-gray-500">{formatProductionHours(pr.hours)}</td>
-                                                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{toPersianDigits(pr.produced.toLocaleString())}</td>
+                                                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{formatProductionInteger(pr.produced)}</td>
                                                         <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_production)}</td>
                                                         <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(pr.waste)}</td>
                                                         <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_waste)}</td>
@@ -362,7 +362,7 @@ export default function MachineMonthlySection() {
                                                             {formatProductionHours(op.hours)}
                                                         </td>
                                                         <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                            {toPersianDigits(op.produced.toLocaleString())}
+                                                            {formatProductionInteger(op.produced)}
                                                         </td>
                                                         <td className="px-3 py-2 text-gray-400">
                                                             {formatProductionInteger(op.expected_production)}

@@ -135,7 +135,7 @@ export default function MachineTrendSection() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={toPersianDigits(summaryReport.totals.produced.toLocaleString())}
+                            value={formatProductionInteger(summaryReport.totals.produced)}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -149,7 +149,7 @@ export default function MachineTrendSection() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={toPersianDigits(summaryReport.totals.waste.toLocaleString())}
+                            value={formatProductionInteger(summaryReport.totals.waste)}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -270,7 +270,7 @@ export default function MachineTrendSection() {
                                                         {formatProductionHours(p.hours)}
                                                     </td>
                                                     <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {toPersianDigits(p.produced.toLocaleString())}
+                                                        {formatProductionInteger(p.produced)}
                                                     </td>
                                                     <td className="px-3 py-2 text-gray-400">
                                                         {formatProductionInteger(p.expected_production)}

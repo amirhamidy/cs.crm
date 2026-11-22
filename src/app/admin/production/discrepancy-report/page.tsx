@@ -67,7 +67,7 @@ const SPANS: Option[] = [
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 export default function DiscrepancyReportPage() {
-    const { machineOptions } = useProductionData(["machines"]);
+    const { machineOptions, employeeOptions } = useProductionData(["machines", "employees"]);
     const { resolvedTheme } = useTheme();
     const dark = resolvedTheme === "dark";
 
@@ -75,6 +75,9 @@ export default function DiscrepancyReportPage() {
     const [causeKind, setCauseKind] = useState<"waste" | "breakdown">("waste");
     const [machineId, setMachineId] = useState<number | null>(null);
     const [productId, setProductId] = useState<number | null>(null);
+    const [employeeId, setEmployeeId] = useState<number | null>(null);
+    const [causeId, setCauseId] = useState<number | null>(null);
+    const [causeOptions, setCauseOptions] = useState<Option[]>([]);
     const [productOptions, setProductOptions] = useState<Option[]>([]);
     const [report, setReport] = useState<DiscrepancyReport | null>(null);
     const [loading, setLoading] = useState(false);
@@ -87,6 +90,13 @@ export default function DiscrepancyReportPage() {
             )
             .catch(() => setProductOptions([]));
     }, []);
+
+    useEffect(() => {
+        setCauseId(null);
+        listAll<{ id: number; name: string }>("/production/api/v1/cause/", { kind: causeKind })
+            .then((rows) => setCauseOptions(rows.map((c) => ({ id: c.id, label: c.name, sub: "" }))))
+            .catch(() => setCauseOptions([]));
+    }, [causeKind]);
 
     useEffect(() => {
         (async () => {
@@ -102,6 +112,8 @@ export default function DiscrepancyReportPage() {
                 };
                 if (machineId !== null) params.machine_id = String(machineId);
                 if (productId !== null) params.product_id = String(productId);
+                if (employeeId !== null) params.employee_id = String(employeeId);
+                if (causeId !== null) params.cause_id = String(causeId);
                 params.kind = causeKind;
                 const res = await axiosInstance.get("/production/api/v1/report/cause/", { params });
                 setReport(res.data as DiscrepancyReport);
@@ -112,7 +124,7 @@ export default function DiscrepancyReportPage() {
                 setLoading(false);
             }
         })();
-    }, [span, machineId, productId, causeKind]);
+    }, [span, machineId, productId, causeKind, employeeId, causeId]);
 
     const data = useMemo(() => {
         const c = report?.chart;
@@ -185,6 +197,22 @@ export default function DiscrepancyReportPage() {
                         options={productOptions}
                         value={productId}
                         onChange={setProductId}
+                    />
+                    <NiceSelect
+                        label="نیرو (اختیاری)"
+                        placeholder="همه نیروها"
+                        emptyText="نیرویی یافت نشد"
+                        options={employeeOptions}
+                        value={employeeId}
+                        onChange={setEmployeeId}
+                    />
+                    <NiceSelect
+                        label="علت (اختیاری)"
+                        placeholder="همه علت‌ها"
+                        emptyText="علتی یافت نشد"
+                        options={causeOptions}
+                        value={causeId}
+                        onChange={setCauseId}
                     />
                 </div>
             </div>
