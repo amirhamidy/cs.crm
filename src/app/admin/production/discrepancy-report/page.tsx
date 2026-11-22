@@ -20,6 +20,7 @@ import {
     StatCard,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
+import { SortableTable } from "@/components/admin/production/sorting";
 
 interface CauseMetrics {
     logs: number;
@@ -67,7 +68,7 @@ const SPANS: Option[] = [
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 export default function DiscrepancyReportPage() {
-    const { machineOptions, employeeOptions } = useProductionData(["machines", "employees"]);
+    const { machineOptions } = useProductionData(["machines"]);
     const { resolvedTheme } = useTheme();
     const dark = resolvedTheme === "dark";
 
@@ -75,9 +76,6 @@ export default function DiscrepancyReportPage() {
     const [causeKind, setCauseKind] = useState<"waste" | "breakdown">("waste");
     const [machineId, setMachineId] = useState<number | null>(null);
     const [productId, setProductId] = useState<number | null>(null);
-    const [employeeId, setEmployeeId] = useState<number | null>(null);
-    const [causeId, setCauseId] = useState<number | null>(null);
-    const [causeOptions, setCauseOptions] = useState<Option[]>([]);
     const [productOptions, setProductOptions] = useState<Option[]>([]);
     const [report, setReport] = useState<DiscrepancyReport | null>(null);
     const [loading, setLoading] = useState(false);
@@ -90,13 +88,6 @@ export default function DiscrepancyReportPage() {
             )
             .catch(() => setProductOptions([]));
     }, []);
-
-    useEffect(() => {
-        setCauseId(null);
-        listAll<{ id: number; name: string }>("/production/api/v1/cause/", { kind: causeKind })
-            .then((rows) => setCauseOptions(rows.map((c) => ({ id: c.id, label: c.name, sub: "" }))))
-            .catch(() => setCauseOptions([]));
-    }, [causeKind]);
 
     useEffect(() => {
         (async () => {
@@ -112,8 +103,6 @@ export default function DiscrepancyReportPage() {
                 };
                 if (machineId !== null) params.machine_id = String(machineId);
                 if (productId !== null) params.product_id = String(productId);
-                if (employeeId !== null) params.employee_id = String(employeeId);
-                if (causeId !== null) params.cause_id = String(causeId);
                 params.kind = causeKind;
                 const res = await axiosInstance.get("/production/api/v1/report/cause/", { params });
                 setReport(res.data as DiscrepancyReport);
@@ -124,7 +113,7 @@ export default function DiscrepancyReportPage() {
                 setLoading(false);
             }
         })();
-    }, [span, machineId, productId, causeKind, employeeId, causeId]);
+    }, [span, machineId, productId, causeKind]);
 
     const data = useMemo(() => {
         const c = report?.chart;
@@ -198,22 +187,6 @@ export default function DiscrepancyReportPage() {
                         value={productId}
                         onChange={setProductId}
                     />
-                    <NiceSelect
-                        label="نیرو (اختیاری)"
-                        placeholder="همه نیروها"
-                        emptyText="نیرویی یافت نشد"
-                        options={employeeOptions}
-                        value={employeeId}
-                        onChange={setEmployeeId}
-                    />
-                    <NiceSelect
-                        label="علت (اختیاری)"
-                        placeholder="همه علت‌ها"
-                        emptyText="علتی یافت نشد"
-                        options={causeOptions}
-                        value={causeId}
-                        onChange={setCauseId}
-                    />
                 </div>
             </div>
 
@@ -247,29 +220,20 @@ export default function DiscrepancyReportPage() {
                                 seriesA={{ label: "ضایعات واقعی", color: "#ef4444" }}
                                 seriesB={{ label: "ضایعات استاندارد", color: "#8b5cf6" }}
                             />
-                            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.02]">
-                                <table className="w-full border-collapse text-right text-[11.5px]">
-                                    <thead>
-                                        <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                            {["علت", "تعداد ثبت", "ضایعات", "استاندارد", "اختلاف", "سهم از کل"].map((heading) => (
-                                                <th key={heading} className="whitespace-nowrap px-3 py-2 font-bold">{heading}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {report.items.map((item) => (
-                                            <tr key={item.cause_id ?? "none"}>
-                                                <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{item.cause_name}</td>
-                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.logs)}</td>
-                                                <td className="px-3 py-2 font-bold text-red-500">{formatProductionInteger(item.totals.waste)}</td>
-                                                <td className="px-3 py-2 text-gray-400">{formatProductionInteger(item.totals.expected_waste)}</td>
-                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.waste_diff)}</td>
-                                                <td className="px-3 py-2 text-gray-500">{item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SortableTable
+                                rows={report.items}
+                                rowKey={(item) => item.cause_id ?? "none"}
+                                initialSort={{ key: "waste", dir: "desc" }}
+                                minWidth={620}
+                                columns={[
+                                    { key: "cause", label: "علت", get: (item) => item.cause_name, tdClass: "font-bold text-gray-700 dark:text-gray-200" },
+                                    { key: "logs", label: "تعداد ثبت", get: (item) => item.totals.logs, firstDir: "desc", render: (item) => formatProductionInteger(item.totals.logs) },
+                                    { key: "waste", label: "ضایعات", get: (item) => item.totals.waste ?? 0, firstDir: "desc", tdClass: "font-bold text-red-500", render: (item) => formatProductionInteger(item.totals.waste) },
+                                    { key: "expected", label: "استاندارد", get: (item) => item.totals.expected_waste ?? 0, firstDir: "desc", tdClass: "text-gray-400", render: (item) => formatProductionInteger(item.totals.expected_waste) },
+                                    { key: "diff", label: "اختلاف", get: (item) => item.totals.waste_diff ?? 0, firstDir: "desc", render: (item) => formatProductionInteger(item.totals.waste_diff) },
+                                    { key: "share", label: "سهم از کل", get: (item) => item.share_percent, firstDir: "desc", render: (item) => (item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`) },
+                                ]}
+                            />
                         </>
                     ) : (
                         <>
@@ -280,27 +244,18 @@ export default function DiscrepancyReportPage() {
                                 <StatCard label="تعداد ثبت" value={formatProductionInteger(report.totals.logs)} tone="emerald" icon={<BarChart3 size={16} />} />
                             </div>
                             <ParetoChart data={data} title="نمودار پارتو زمان توقف" subtitle="زمان توقف دستگاه به تفکیک علت و درصد تجمعی" valueLabel="توقف (دقیقه)" />
-                            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.02]">
-                                <table className="w-full border-collapse text-right text-[11.5px]">
-                                    <thead>
-                                        <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                            {["علت خرابی", "تعداد ثبت", "مدت توقف", "سهم از کل توقف"].map((heading) => (
-                                                <th key={heading} className="whitespace-nowrap px-3 py-2 font-bold">{heading}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {report.items.map((item) => (
-                                            <tr key={item.cause_id ?? "none"}>
-                                                <td className="px-3 py-2 font-bold text-gray-700 dark:text-gray-200">{item.cause_name}</td>
-                                                <td className="px-3 py-2 text-gray-500">{formatProductionInteger(item.totals.logs)}</td>
-                                                <td className="px-3 py-2 font-bold text-red-500">{formatProductionInteger(item.totals.downtime_minutes)} دقیقه</td>
-                                                <td className="px-3 py-2 text-gray-500">{item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <SortableTable
+                                rows={report.items}
+                                rowKey={(item) => item.cause_id ?? "none"}
+                                initialSort={{ key: "minutes", dir: "desc" }}
+                                minWidth={520}
+                                columns={[
+                                    { key: "cause", label: "علت خرابی", get: (item) => item.cause_name, tdClass: "font-bold text-gray-700 dark:text-gray-200" },
+                                    { key: "logs", label: "تعداد ثبت", get: (item) => item.totals.logs, firstDir: "desc", render: (item) => formatProductionInteger(item.totals.logs) },
+                                    { key: "minutes", label: "مدت توقف", get: (item) => item.totals.downtime_minutes ?? 0, firstDir: "desc", tdClass: "font-bold text-red-500", render: (item) => `${formatProductionInteger(item.totals.downtime_minutes)} دقیقه` },
+                                    { key: "share", label: "سهم از کل توقف", get: (item) => item.share_percent, firstDir: "desc", render: (item) => (item.share_percent == null ? "—" : `${formatProductionPercent(item.share_percent)}٪`) },
+                                ]}
+                            />
                         </>
                     )}
                 </div>

@@ -18,6 +18,7 @@ import { toPersianDigits, JALALI_MONTHS } from "@/lib/jalali";
 import {
     Option,
     MonthlyReport,
+    MonthlyReportDay,
     gradientOf,
     initialOf,
     parseBackendError,
@@ -30,6 +31,7 @@ import {
     EfficiencyBadge,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
+import { SortableTable } from "@/components/admin/production/sorting";
 
 export default function MonthlyPage() {
     const { employeeOptions } = useProductionData(["employees"]);
@@ -129,7 +131,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={formatProductionInteger(monthlyReport.totals.produced)}
+                            value={toPersianDigits(monthlyReport.totals.produced.toLocaleString())}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -143,7 +145,7 @@ export default function MonthlyPage() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={formatProductionInteger(monthlyReport.totals.waste)}
+                            value={toPersianDigits(monthlyReport.totals.waste.toLocaleString())}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -249,71 +251,26 @@ export default function MonthlyPage() {
                                             </span>
                                         </div>
 
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full border-collapse text-right text-[11.5px]">
-                                                <thead>
-                                                    <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                                        {[
-                                                            "تاریخ",
-                                                            "محصول",
-                                                            "ساعت",
-                                                            "تولید",
-                                                            "انتظاری",
-                                                            "ضایعات",
-                                                            "انتظاری",
-                                                            "راندمان",
-                                                            "علت ضایعات",
-                                                            "علت خرابی",
-                                                            "توقف (دقیقه)",
-                                                            "توضیحات",
-                                                        ].map((h, i) => (
-                                                            <th key={i} className="whitespace-nowrap px-2 py-2 font-bold">
-                                                                {h}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                    {mch.days.map((d) => (
-                                                        <tr
-                                                            key={d.log_id}
-                                                            className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                                                        >
-                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500 dark:text-gray-400">
-                                                                {toPersianDigits(d.jalali_date)}
-                                                            </td>
-                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-700 dark:text-gray-300">
-                                                                {d.product_name || "—"}
-                                                            </td>
-                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500">
-                                                                {formatProductionLogHours(d.hours, d.start_time, d.end_time)}
-                                                            </td>
-                                                            <td className="px-2 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                                {formatProductionInteger(d.produced)}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-gray-400">
-                                                                {formatProductionInteger(d.expected_production)}
-                                                            </td>
-                                                            <td className="px-2 py-2 font-bold text-red-500">
-                                                                {toPersianDigits(d.waste)}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-gray-400">
-                                                                {formatProductionInteger(d.expected_waste)}
-                                                            </td>
-                                                            <td className="px-2 py-2">
-                                                                <EfficiencyBadge value={d.efficiency} />
-                                                            </td>
-                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500">{d.waste_cause_name || "—"}</td>
-                                                            <td className="whitespace-nowrap px-2 py-2 text-gray-500">{d.breakdown_cause_name || "—"}</td>
-                                                            <td className="px-2 py-2 text-gray-500">{toPersianDigits(d.downtime_minutes ?? 0)}</td>
-                                                            <td className="px-2 py-2 text-gray-400">
-                                                                {d.note || "—"}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                        <SortableTable
+                                            rows={mch.days}
+                                            rowKey={(d) => d.log_id}
+                                            initialSort={{ key: "date", dir: "asc" }}
+                                            minWidth={980}
+                                            columns={[
+                                                { key: "date", label: "تاریخ", get: (d: MonthlyReportDay) => d.date, render: (d: MonthlyReportDay) => toPersianDigits(d.jalali_date), tdClass: "whitespace-nowrap text-gray-500 dark:text-gray-400" },
+                                                { key: "product", label: "محصول", get: (d: MonthlyReportDay) => d.product_name, render: (d: MonthlyReportDay) => d.product_name || "—" },
+                                                { key: "hours", label: "ساعت", get: (d: MonthlyReportDay) => Number(d.hours), firstDir: "desc", render: (d: MonthlyReportDay) => formatProductionLogHours(d.hours, d.start_time, d.end_time) },
+                                                { key: "produced", label: "تولید", get: (d: MonthlyReportDay) => d.produced, firstDir: "desc", tdClass: "font-bold text-emerald-600 dark:text-emerald-400", render: (d: MonthlyReportDay) => toPersianDigits(d.produced.toLocaleString()) },
+                                                { key: "ep", label: "انتظاری", get: (d: MonthlyReportDay) => Number(d.expected_production), firstDir: "desc", tdClass: "text-gray-400", render: (d: MonthlyReportDay) => formatProductionInteger(d.expected_production) },
+                                                { key: "waste", label: "ضایعات", get: (d: MonthlyReportDay) => d.waste, firstDir: "desc", tdClass: "font-bold text-red-500", render: (d: MonthlyReportDay) => toPersianDigits(d.waste) },
+                                                { key: "ew", label: "انتظاری", get: (d: MonthlyReportDay) => Number(d.expected_waste), firstDir: "desc", tdClass: "text-gray-400", render: (d: MonthlyReportDay) => formatProductionInteger(d.expected_waste) },
+                                                { key: "eff", label: "راندمان", get: (d: MonthlyReportDay) => d.efficiency, firstDir: "desc", render: (d: MonthlyReportDay) => <EfficiencyBadge value={d.efficiency} /> },
+                                                { key: "wc", label: "علت ضایعات", get: (d: MonthlyReportDay) => d.waste_cause_name, render: (d: MonthlyReportDay) => d.waste_cause_name || "—" },
+                                                { key: "bc", label: "علت خرابی", get: (d: MonthlyReportDay) => d.breakdown_cause_name, render: (d: MonthlyReportDay) => d.breakdown_cause_name || "—" },
+                                                { key: "dt", label: "توقف (دقیقه)", get: (d: MonthlyReportDay) => d.downtime_minutes ?? 0, firstDir: "desc", render: (d: MonthlyReportDay) => toPersianDigits(d.downtime_minutes ?? 0) },
+                                                { key: "note", label: "توضیحات", sortable: false, render: (d: MonthlyReportDay) => d.note || "—", tdClass: "text-gray-400" },
+                                            ]}
+                                        />
                                     </div>
                                 ))}
                             </div>

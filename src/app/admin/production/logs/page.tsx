@@ -15,6 +15,7 @@ import {
     Filter,
     Eye,
     Loader2,
+    Scale,
 } from "lucide-react";
 import { toHHMM } from "@/lib/productionTime";
 import { toPersianDigits } from "@/lib/jalali";
@@ -31,6 +32,8 @@ import {
     parseBackendError,
 } from "@/components/admin/production/shared";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
+import { SortButton, nextSort } from "@/components/admin/production/sorting";
+import type { SortState } from "@/components/admin/production/sorting";
 
 export default function LogsPage() {
     const { setLogToDelete, setLogToEdit, setLogToView, employeeOptions, machineOptions, refreshVersion } = useProductionData(["machines", "employees"]);
@@ -63,7 +66,9 @@ export default function LogsPage() {
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
     const [search, setSearch] = useState("");
-    const [ordering, setOrdering] = useState("");
+    // مرتب‌سازی سمت سرور (روی همه‌ی صفحات): ?ordering=produced یا ?ordering=-produced
+    const [sort, setSort] = useState<SortState>(null);
+    const ordering = sort ? `${sort.dir === "desc" ? "-" : ""}${sort.key}` : undefined;
 
     const debouncedSearch = useDebounced(search);
 
@@ -82,7 +87,7 @@ export default function LogsPage() {
             breakdown_cause_id: filterBreakdownCauseId ?? undefined,
             date_from: filterDateFrom || undefined,
             date_to: filterDateTo || undefined,
-            ordering: ordering || undefined,
+            ordering,
         }, controller.signal)
             .then((response) => {
                 setLogs(response.results);
@@ -216,29 +221,29 @@ export default function LogsPage() {
                                     ["پرسنل", "employee"],
                                     ["ماشین", "machine"],
                                     ["محصول", "product"],
-                                    ["علت", ""],
+                                    ["علت", null],
                                     ["ساعت کار", "hours"],
                                     ["تولید", "produced"],
-                                    ["انتظاری", ""],
+                                    ["انتظاری", null],
                                     ["ضایعات", "waste"],
-                                    ["انتظاری", ""],
-                                    ["راندمان", ""],
-                                    ["", ""],
-                                ] as const).map(([h, key], i) => (
+                                    ["انتظاری", null],
+                                    ["راندمان", null],
+                                    ["", null],
+                                ] as [string, string | null][]).map(([h, key], i) => (
                                     <th key={i} className="whitespace-nowrap px-4 py-3 font-bold">
                                         {key ? (
-                                            <button
-                                                type="button"
+                                            <SortButton
+                                                label={h}
+                                                active={sort?.key === key}
+                                                dir={sort?.dir ?? "asc"}
                                                 onClick={() => {
-                                                    setOrdering(ordering === key ? `-${key}` : ordering === `-${key}` ? "" : key);
+                                                    setSort((p) => nextSort(p, key, key === "date" || key === "produced" || key === "waste" || key === "hours" ? "desc" : "asc"));
                                                     setPage(1);
                                                 }}
-                                                className="flex items-center gap-1 hover:text-gray-600"
-                                            >
-                                                {h}
-                                                <span className="text-[10px]">{ordering === key ? "▲" : ordering === `-${key}` ? "▼" : "↕"}</span>
-                                            </button>
-                                        ) : h}
+                                            />
+                                        ) : (
+                                            h
+                                        )}
                                     </th>
                                 ))}
                             </tr>
@@ -269,6 +274,9 @@ export default function LogsPage() {
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
                                             {log.product_name || "—"}
+                                            {log.daily_standard && (
+                                                <span title={log.daily_standard_reason || ""} className="mr-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600">استاندارد خاص</span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                             <span className="block">{log.waste_cause_name || "—"}</span>
@@ -310,6 +318,15 @@ export default function LogsPage() {
                                                 >
                                                     <Eye size={13} />
                                                 </button>
+                                                {log.product && (
+                                                    <a
+                                                        href={`/admin/production/daily-standard?product=${log.product}&date=${String(log.date).slice(0, 10)}`}
+                                                        title="استاندارد روزانه این محصول"
+                                                        className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 transition-colors hover:bg-indigo-500 hover:text-white"
+                                                    >
+                                                        <Scale size={13} />
+                                                    </a>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() => setLogToEdit(log)}

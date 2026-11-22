@@ -1,5 +1,6 @@
 "use client";
 
+import PerfTable from "./PerfTable";
 import { formatProductionInteger, formatProductionPercent, formatProductionHours } from "@/lib/productionFormat";
 
 import { useEffect, useMemo, useState } from "react";
@@ -161,7 +162,7 @@ export default function MachineMonthlySection() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={formatProductionInteger(machineMonthlyReport.totals.produced)}
+                            value={toPersianDigits(machineMonthlyReport.totals.produced.toLocaleString())}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -175,7 +176,7 @@ export default function MachineMonthlySection() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={formatProductionInteger(machineMonthlyReport.totals.waste)}
+                            value={toPersianDigits(machineMonthlyReport.totals.waste.toLocaleString())}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -297,31 +298,18 @@ export default function MachineMonthlySection() {
 
                                 {mch.products.length > 0 && (
                                     <div className="overflow-x-auto border-b border-black/5 dark:border-white/5">
-                                        <table className="w-full border-collapse text-right text-[11.5px]">
-                                            <thead>
-                                                <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                                    {["محصول", "ساعت", "تولید", "انتظاری", "ضایعات", "انتظاری", "راندمان"].map((h, i) => (
-                                                        <th key={i} className="whitespace-nowrap px-3 py-2 font-bold">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {mch.products.map((pr) => (
-                                                    <tr key={pr.product_id ?? "none"} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                                                        <td className="whitespace-nowrap px-3 py-2 font-extrabold text-gray-800 dark:text-gray-100">
-                                                            {pr.product_name ?? "بدون محصول"}
-                                                            {pr.product_code && <span className="mr-1 font-mono text-[10px] font-normal text-gray-400">({pr.product_code})</span>}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-2 text-gray-500">{formatProductionHours(pr.hours)}</td>
-                                                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{formatProductionInteger(pr.produced)}</td>
-                                                        <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_production)}</td>
-                                                        <td className="px-3 py-2 font-bold text-red-500">{toPersianDigits(pr.waste)}</td>
-                                                        <td className="px-3 py-2 text-gray-400">{formatProductionInteger(pr.expected_waste)}</td>
-                                                        <td className="px-3 py-2"><EfficiencyBadge value={pr.efficiency} /></td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        <PerfTable
+                                            rows={mch.products}
+                                            nameLabel="محصول"
+                                            nameValue={(pr) => pr.product_name ?? "بدون محصول"}
+                                            renderName={(pr) => (
+                                                <>
+                                                    {pr.product_name ?? "بدون محصول"}
+                                                    {pr.product_code && <span className="mr-1 font-mono text-[10px] font-normal text-gray-400">({pr.product_code})</span>}
+                                                </>
+                                            )}
+                                            rowKey={(pr) => pr.product_id ?? "none"}
+                                        />
                                     </div>
                                 )}
 
@@ -331,55 +319,13 @@ export default function MachineMonthlySection() {
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse text-right text-[11.5px]">
-                                            <thead>
-                                                <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                                    {[
-                                                        "اپراتور",
-                                                        "ساعت",
-                                                        "تولید",
-                                                        "انتظاری",
-                                                        "ضایعات",
-                                                        "انتظاری",
-                                                        "راندمان",
-                                                    ].map((h, i) => (
-                                                        <th key={i} className="whitespace-nowrap px-3 py-2 font-bold">
-                                                            {h}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {mch.operators.map((op) => (
-                                                    <tr
-                                                        key={op.employee_id}
-                                                        className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                                                    >
-                                                        <td className="whitespace-nowrap px-3 py-2 font-extrabold text-gray-800 dark:text-gray-100">
-                                                            {op.employee_name}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                                                            {formatProductionHours(op.hours)}
-                                                        </td>
-                                                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                            {formatProductionInteger(op.produced)}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-gray-400">
-                                                            {formatProductionInteger(op.expected_production)}
-                                                        </td>
-                                                        <td className="px-3 py-2 font-bold text-red-500">
-                                                            {toPersianDigits(op.waste)}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-gray-400">
-                                                            {formatProductionInteger(op.expected_waste)}
-                                                        </td>
-                                                        <td className="px-3 py-2">
-                                                            <EfficiencyBadge value={op.efficiency} />
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        <PerfTable
+                                            rows={mch.operators}
+                                            nameLabel="اپراتور"
+                                            nameValue={(op) => op.employee_name}
+                                            renderName={(op) => op.employee_name}
+                                            rowKey={(op) => op.employee_id}
+                                        />
                                     </div>
                                 )}
                             </div>

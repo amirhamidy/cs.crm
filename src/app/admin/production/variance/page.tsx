@@ -12,6 +12,7 @@ import { listAll } from "@/lib/api/_core";
 import type { Product, Option } from "@/components/admin/production/shared";
 import { parseBackendError, NiceSelect, JalaliDatePicker, currentJalaliYearMonth, alignToPeriod, currentMonthRange } from "@/components/admin/production/shared";
 import { JALALI_MONTHS } from "@/lib/jalali";
+import { SortableTable } from "@/components/admin/production/sorting";
 
 type Totals = {
     hours: number;
@@ -168,7 +169,7 @@ export default function VariancePage() {
 
             {data && data[focus] && (() => {
                 const t = data[focus]!.totals;
-                const eff = Number(t?.expected_production) ? (Number(t.produced) / Number(t.expected_production)) * 100 : null;
+                const eff = t?.expected_production ? (t.produced / t.expected_production) * 100 : null;
                 const cards = [
                     { l: "ساعت کار", v: formatProductionHours(t?.hours), i: <Clock size={14} />, c: "text-gray-500 bg-gray-500/10" },
                     { l: "تولید", v: fmt(t?.produced), i: <Factory size={14} />, c: "text-blue-500 bg-blue-500/10" },
@@ -221,33 +222,22 @@ export default function VariancePage() {
                                             seriesB={{ label: "ضایعات انتظاری", hint: "مقدار ضایعات مجاز طبق استاندارد", color: "#74a909" }}
                                         />
                                     </div>
-                                    <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.06]">
-                                        <table className="w-full min-w-[720px] text-right text-[12px]">
-                                            <thead className="bg-black/[0.02] text-gray-500 dark:bg-white/[0.03]">
-                                                <tr>
-                                                    {[label, "ساعت کار", "تولید", "انتظاری", "اختلاف تولید", "ضایعات", "ضایعات انتظاری", "اختلاف ضایعات"].map((h) => (
-                                                        <th key={h} className="px-3 py-2.5 font-bold">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {section.items.length === 0 ? (
-                                                    <tr><td colSpan={8} className="px-3 py-6 text-center text-gray-400">در این بازه هیچ رکوردی ثبت نشده است.</td></tr>
-                                                ) : section.items.map((it, idx) => (
-                                                    <tr key={idx} className="border-t border-black/[0.04] dark:border-white/[0.04]">
-                                                        <td className="px-3 py-2.5 font-bold">{itemName(it)}</td>
-                                                        <td className="px-3 py-2.5">{formatProductionHours(it.totals.hours)}</td>
-                                                        <td className="px-3 py-2.5">{fmt(it.totals.produced)}</td>
-                                                        <td className="px-3 py-2.5">{fmt(it.totals.expected_production)}</td>
-                                                        <td className={`px-3 py-2.5 font-bold ${it.totals.production_diff < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.production_diff)} ({formatProductionPercent(it.totals.production_diff_percent)}٪)</td>
-                                                        <td className="px-3 py-2.5">{fmt(it.totals.waste)}</td>
-                                                        <td className="px-3 py-2.5">{fmt(it.totals.expected_waste)}</td>
-                                                        <td className={`px-3 py-2.5 font-bold ${it.totals.waste_diff > 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.waste_diff)} ({formatProductionPercent(it.totals.waste_diff_percent)}٪)</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <SortableTable
+                                        rows={section.items}
+                                        rowKey={(_, idx) => idx}
+                                        minWidth={720}
+                                        empty="در این بازه هیچ رکوردی ثبت نشده است."
+                                        columns={[
+                                            { key: "name", label, get: (it: Item) => itemName(it), tdClass: "font-bold" },
+                                            { key: "hours", label: "ساعت کار", get: (it: Item) => it.totals.hours, firstDir: "desc", render: (it: Item) => formatProductionHours(it.totals.hours) },
+                                            { key: "produced", label: "تولید", get: (it: Item) => it.totals.produced, firstDir: "desc", render: (it: Item) => fmt(it.totals.produced) },
+                                            { key: "expected", label: "انتظاری", get: (it: Item) => it.totals.expected_production, firstDir: "desc", render: (it: Item) => fmt(it.totals.expected_production) },
+                                            { key: "pdiff", label: "اختلاف تولید", get: (it: Item) => it.totals.production_diff, firstDir: "desc", render: (it: Item) => <span className={`font-bold ${it.totals.production_diff < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.production_diff)} ({formatProductionPercent(it.totals.production_diff_percent)}٪)</span> },
+                                            { key: "waste", label: "ضایعات", get: (it: Item) => it.totals.waste, firstDir: "desc", render: (it: Item) => fmt(it.totals.waste) },
+                                            { key: "ewaste", label: "ضایعات انتظاری", get: (it: Item) => it.totals.expected_waste, firstDir: "desc", render: (it: Item) => fmt(it.totals.expected_waste) },
+                                            { key: "wdiff", label: "اختلاف ضایعات", get: (it: Item) => it.totals.waste_diff, firstDir: "desc", render: (it: Item) => <span className={`font-bold ${it.totals.waste_diff > 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(it.totals.waste_diff)} ({formatProductionPercent(it.totals.waste_diff_percent)}٪)</span> },
+                                        ]}
+                                    />
                                 </div>
                             );
                         })}

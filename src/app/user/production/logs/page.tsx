@@ -37,6 +37,8 @@ interface ProductionLog {
   expected_production: string;
   expected_waste: string;
   efficiency: number | null;
+  daily_standard?: number | null;
+  daily_standard_reason?: string | null;
 }
 
 export default function UserProductionLogsPage() {
@@ -84,6 +86,21 @@ export default function UserProductionLogsPage() {
       setLoading(false);
     }
   };
+
+  const [dayStd, setDayStd] = useState<{ std_production_per_hour: string; std_waste_per_hour: string; reason: string } | null>(null);
+  useEffect(() => {
+    setDayStd(null);
+    if (!formDate || !formProduct) return;
+    let alive = true;
+    listAll<any>("/production/api/v1/daily-standard/", { date: formDate, product_id: formProduct })
+      .then((rows) => {
+        if (!alive) return;
+        const hit = rows.find((r) => r.machine === Number(formMachine)) || rows.find((r) => r.machine == null) || null;
+        setDayStd(hit);
+      })
+      .catch(() => alive && setDayStd(null));
+    return () => { alive = false; };
+  }, [formDate, formProduct, formMachine]);
 
   useEffect(() => {
     if (!employeeId) return;
@@ -231,7 +248,12 @@ export default function UserProductionLogsPage() {
                       )}
                     </td>
                     <td className="p-4 font-black text-emerald-600">{toPersianDigits(log.produced_qty.toLocaleString())}</td>
-                    <td className="p-4 text-gray-400">{formatProductionInteger(log.expected_production)}</td>
+                    <td className="p-4 text-gray-400">
+                      {formatProductionInteger(log.expected_production)}
+                      {log.daily_standard && (
+                        <span title={log.daily_standard_reason || ""} className="mr-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600">استاندارد خاص</span>
+                      )}
+                    </td>
                     <td className="p-4 font-bold text-red-500">{toPersianDigits(log.waste_qty)}</td>
                     <td className="p-4">
                       {log.efficiency !== null ? (
@@ -327,6 +349,11 @@ export default function UserProductionLogsPage() {
                       </option>
                     ))}
                   </select>
+                  {dayStd && (
+                    <p className="mt-1.5 rounded-xl bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-600">
+                      استاندارد خاص این روز: تولید {formatProductionInteger(dayStd.std_production_per_hour)} / ضایعات {formatProductionInteger(dayStd.std_waste_per_hour)} در ساعت{dayStd.reason ? ` — ${dayStd.reason}` : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

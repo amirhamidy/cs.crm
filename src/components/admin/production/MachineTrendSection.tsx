@@ -1,5 +1,6 @@
 "use client";
 
+import PerfTable from "./PerfTable";
 import { formatProductionInteger, formatProductionPercent, formatProductionHours, sumProductionDecimals } from "@/lib/productionFormat";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -135,7 +136,7 @@ export default function MachineTrendSection() {
                         />
                         <StatCard
                             label="کل تولید"
-                            value={formatProductionInteger(summaryReport.totals.produced)}
+                            value={toPersianDigits(summaryReport.totals.produced.toLocaleString())}
                             unit="عدد"
                             tone="emerald"
                             icon={<TrendingUp size={16} />}
@@ -149,7 +150,7 @@ export default function MachineTrendSection() {
                         />
                         <StatCard
                             label="کل ضایعات"
-                            value={formatProductionInteger(summaryReport.totals.waste)}
+                            value={toPersianDigits(summaryReport.totals.waste.toLocaleString())}
                             unit="عدد"
                             tone="red"
                             icon={<AlertTriangle size={16} />}
@@ -239,55 +240,14 @@ export default function MachineTrendSection() {
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse text-right text-[11.5px]">
-                                        <thead>
-                                            <tr className="border-b border-black/5 text-[10.5px] text-gray-400 dark:border-white/5">
-                                                {[
-                                                    "بازه",
-                                                    "ساعت",
-                                                    "تولید",
-                                                    "انتظاری",
-                                                    "ضایعات",
-                                                    "انتظاری",
-                                                    "راندمان",
-                                                ].map((h, i) => (
-                                                    <th key={i} className="whitespace-nowrap px-3 py-2 font-bold">
-                                                        {h}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {mch.periods.map((p) => (
-                                                <tr
-                                                    key={p.key}
-                                                    className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                                                >
-                                                    <td className="whitespace-nowrap px-3 py-2 font-bold text-gray-700 dark:text-gray-200">
-                                                        {toPersianDigits(p.label)}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                                                        {formatProductionHours(p.hours)}
-                                                    </td>
-                                                    <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {formatProductionInteger(p.produced)}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-gray-400">
-                                                        {formatProductionInteger(p.expected_production)}
-                                                    </td>
-                                                    <td className="px-3 py-2 font-bold text-red-500">
-                                                        {toPersianDigits(p.waste)}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-gray-400">
-                                                        {formatProductionInteger(p.expected_waste)}
-                                                    </td>
-                                                    <td className="px-3 py-2">
-                                                        <EfficiencyBadge value={p.efficiency} />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                    <PerfTable
+                                        rows={mch.periods}
+                                        nameLabel="بازه"
+                                        nameValue={(p) => p.key}
+                                        renderName={(p) => toPersianDigits(p.label)}
+                                        rowKey={(p) => p.key}
+                                        initialSort={{ key: "name", dir: "asc" }}
+                                    />
                                 </div>
                             </div>
                         ))

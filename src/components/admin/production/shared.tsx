@@ -84,6 +84,8 @@ export interface ProductionLog {
     expected_production: string;
     expected_waste: string;
     efficiency: number | null;
+    daily_standard?: number | null;
+    daily_standard_reason?: string | null;
 }
 
 export interface Product {
@@ -108,7 +110,6 @@ export interface Cause {
 }
 
 export interface EmployeeItem {
-    is_active?: boolean;
     id: number;
     full_name: string;
     username: string;
@@ -1316,7 +1317,7 @@ export function LogModal({
         let alive = true;
         listAll<EmployeeItem>("/accounts/api/v1/employee/list/")
             .then((all) => {
-                if (alive) setEmployees(all.filter((e) => e.is_active !== false || e.id === log?.employee));
+                if (alive) setEmployees(all);
             })
             .catch(() => {
                 if (alive) setError("دریافت لیست کارمندان انجام نشد");
