@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, FileText, Plus, Search, Users, X } from "lucide-react";
 import HumanResourceCard from "./HumanResourceCard";
 import HumanResourceForm from "./HumanResourceForm";
+import HumanResourceHrModal from "./HumanResourceHrModal";
 import HumanResourceStepsModal from "./HumanResourceStepsModal";
 import {
     Department, DepartmentEmployee, HumanResource,
@@ -26,6 +27,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     const [metaLoading, setMetaLoading] = useState(true);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<HumanResource | null>(null);
+    const [hrDocument, setHrDocument] = useState<HumanResource | null>(null);
     const [stepsDocument, setStepsDocument] = useState<HumanResource | null>(null);
 
     // فهرست منابع انسانی سمت سرور صفحه‌بندی می‌شود؛ در هر بار فقط یک صفحه
@@ -232,6 +234,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                                     onEdit={() => handleEdit(d)}
                                     onDelete={() => handleDelete(d)}
                                     onSteps={() => setStepsDocument(d)}
+                                    onHr={canManage ? () => setHrDocument(d) : undefined}
                                     onChange={refresh}
                                 />
                             </motion.div>
@@ -255,6 +258,10 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                     }}
                     onSaved={refresh}
                 />
+            )}
+
+            {canManage && (
+                <HumanResourceHrModal open={!!hrDocument} document={hrDocument} onClose={() => setHrDocument(null)} onChange={refresh} />
             )}
 
             <HumanResourceStepsModal open={!!stepsDocument} document={stepsDocument} canManage={canManage} onClose={() => setStepsDocument(null)} onChange={refresh} />

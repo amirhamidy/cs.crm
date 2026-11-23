@@ -1,33 +1,45 @@
 "use client";
 
-import type { ReactNode, InputHTMLAttributes, SelectHTMLAttributes } from "react";
+import { Children, type ReactElement, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
+import NiceSelect from "./NiceSelect";
+import JalaliDatePicker from "./JalaliDatePicker";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 export const inputCls =
-  "h-10 w-full rounded-xl border border-gray-100 bg-gray-50 px-3 text-[12px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 disabled:opacity-60 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white";
+  "h-11 w-full rounded-full border border-gray-200 bg-white px-5 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 disabled:opacity-60 dark:border-white/10 dark:bg-[#0b1220] dark:text-white dark:focus:border-white/30";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="block space-y-1.5">
-      <span className="text-[11px] font-extrabold text-gray-500 dark:text-gray-400">{label}</span>
+    <div className="relative block">
+      <span className="pointer-events-none absolute right-3 top-0 z-10 -translate-y-1/2 rounded bg-white px-1.5 text-[10.5px] font-extrabold text-gray-500 dark:bg-[#0b1220] dark:text-gray-400">{label}</span>
       {children}
-      {hint && <span className="block text-[10px] font-semibold text-gray-400">{hint}</span>}
-    </label>
+      {hint && <span className="mt-1 block text-[10px] font-semibold text-gray-400">{hint}</span>}
+    </div>
   );
 }
 
-export const TextInput = (p: InputHTMLAttributes<HTMLInputElement>) => (
-  <input {...p} className={`${inputCls} ${p.className ?? ""}`} />
-);
+export const TextInput = (p: InputHTMLAttributes<HTMLInputElement>) =>
+  p.type === "date" ? (
+    <JalaliDatePicker value={String(p.value ?? "")} required={p.required} disabled={p.disabled}
+      onChange={(v) => p.onChange?.({ target: { value: v } } as never)} />
+  ) : (
+    <input {...p} className={`${inputCls} ${p.className ?? ""}`} />
+  );
 
-export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => (
-  <select {...p} className={`${inputCls} ${p.className ?? ""}`} />
-);
+export const Select = ({ children, value, onChange, className, disabled }: SelectHTMLAttributes<HTMLSelectElement>) => {
+  const options = Children.toArray(children).flatMap((c) => {
+    const el = c as ReactElement<{ value?: string; children?: ReactNode }>;
+    if (!el?.props) return [];
+    return [{ value: String(el.props.value ?? el.props.children ?? ""), label: String(Children.toArray(el.props.children).join("")) }];
+  });
+  return <NiceSelect value={String(value ?? "")} options={options} disabled={disabled} className={className}
+    onChange={(v) => onChange?.({ target: { value: v } } as never)} />;
+};
 
 export function ErrorBox({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div className="flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+    <div className="flex items-start gap-2 rounded-full bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
       <AlertCircle size={14} className="mt-0.5 shrink-0" />
       <span>{message}</span>
     </div>
@@ -43,7 +55,7 @@ export function PrimaryButton({
     <button
       {...rest}
       disabled={loading || rest.disabled}
-      className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 text-[12px] font-extrabold text-white transition hover:bg-indigo-500 disabled:opacity-60 ${rest.className ?? ""}`}
+      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 text-[12px] font-extrabold text-white transition hover:bg-indigo-500 disabled:opacity-60 ${rest.className ?? ""}`}
     >
       {loading && <Loader2 size={13} className="animate-spin" />}
       {children}
@@ -56,14 +68,14 @@ export function GhostButton(p: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     <button
       type="button"
       {...p}
-      className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-gray-200 px-5 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 ${p.className ?? ""}`}
+      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-gray-200 px-5 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 ${p.className ?? ""}`}
     />
   );
 }
 
 export function EmptyState({ icon, title, text }: { icon: ReactNode; title: string; text?: string }) {
   return (
-    <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[1.45rem] border border-dashed border-gray-200 bg-white text-center dark:border-white/[0.07] dark:bg-[#111827]">
+    <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-gray-200 bg-white text-center dark:border-white/[0.07] dark:bg-[#111827]">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-400 dark:bg-indigo-500/10">
         {icon}
       </div>

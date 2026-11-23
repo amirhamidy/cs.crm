@@ -1,8 +1,7 @@
 "use client";
 
-import HRHub from "@/components/admin/human_resources/hr/HRHub";
+import HumanResourcesPage from "@/components/admin/human_resources/HumanResourcesPage";
 
-
-export default function HumanResourcesPageRoute() {
-    return <HRHub canManage />;
+export default function Page() {
+  return <HumanResourcesPage canManage />;
 }

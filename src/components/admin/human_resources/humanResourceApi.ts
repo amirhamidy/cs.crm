@@ -27,6 +27,8 @@ export interface HumanResource {
   created_by: number;
   files: HumanResourceFile[];
   steps: HumanResourceStep[];
+  employee?: number | null;
+  employee_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -357,3 +359,117 @@ export const fetchDocumentStepsList = async (
   );
 
 export { unwrapList };
+
+
+/* -------------------------------------------------------------------------- */
+/*                     HR info / salaries / leaves (admin only)               */
+/* -------------------------------------------------------------------------- */
+
+export type SalaryPeriod = "daily" | "monthly";
+export type LeaveKind = "paid" | "unpaid";
+
+export interface HrSalary {
+  id: number;
+  period_type: SalaryPeriod;
+  period_type_display?: string;
+  amount: string;
+  effective_from: string;
+  effective_to: string | null;
+  note: string;
+  created_at?: string;
+}
+
+export interface HrInfo {
+  id: number;
+  title: string;
+  employee: number | null;
+  employee_name: string | null;
+  daily_work_hours: string;
+  overtime_rate_per_hour: string;
+  guild_work_hours: string | null;
+  contract_file: number | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  current_salary: HrSalary | null;
+}
+
+export type HrInfoPayload = Partial<
+  Pick<
+    HrInfo,
+    | "employee"
+    | "daily_work_hours"
+    | "overtime_rate_per_hour"
+    | "guild_work_hours"
+    | "contract_file"
+    | "contract_start_date"
+    | "contract_end_date"
+  >
+>;
+
+export interface HrSalaryPayload {
+  period_type: SalaryPeriod;
+  amount: string;
+  effective_from?: string;
+  effective_to?: string | null;
+  note?: string;
+}
+
+export interface HrLeave {
+  id: number;
+  leave_type: LeaveKind;
+  leave_type_display: string;
+  start_date: string;
+  end_date: string;
+  hours: string | null;
+  days: number;
+  reason: string;
+}
+
+export interface HrLeavePayload {
+  leave_type: LeaveKind;
+  start_date: string;
+  end_date: string;
+  hours: string | null;
+  reason: string;
+}
+
+export const getHrInfo = (id: number) => api.get<HrInfo>(`${DOC}/${id}/hr/`);
+export const updateHrInfo = (id: number, data: HrInfoPayload) =>
+  api.patch<HrInfo>(`${DOC}/${id}/hr/`, data);
+
+export const getHrSalaries = async (id: number) =>
+  wrap(await listAll<HrSalary>(`${DOC}/${id}/salaries/`));
+export const createHrSalary = (id: number, data: HrSalaryPayload) =>
+  api.post<HrSalary>(`${DOC}/${id}/salaries/`, data);
+export const deleteHrSalary = (salaryId: number) =>
+  api.delete(`${DOC}/salaries/${salaryId}/`);
+
+export const getHrLeaves = async (
+  id: number,
+  params: { leave_type?: LeaveKind; date_from?: string; date_to?: string } = {},
+) => {
+  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v));
+  const { data } = await api.get<unknown>(`${DOC}/${id}/leaves/`, {
+    params: { ...clean, page_size: 200 },
+  });
+  return toPaginated<HrLeave>(data).results;
+};
+export const createHrLeave = (id: number, data: HrLeavePayload) =>
+  api.post<HrLeave>(`${DOC}/${id}/leaves/`, data);
+export const deleteHrLeave = (leaveId: number) =>
+  api.delete(`${DOC}/leaves/${leaveId}/`);
+
+/** استخراج پیام خطا از پاسخ ۴۰۰/۴۰۳ بک‌اند. */
+export function hrErrorMessage(e: unknown): string {
+  const r = (e as { response?: { status?: number; data?: unknown } })?.response;
+  if (r?.status === 403) return "فقط مدیر به این بخش دسترسی دارد.";
+  const d = r?.data;
+  if (d && typeof d === "object") {
+    const parts = Object.entries(d as Record<string, unknown>).map(([k, v]) => {
+      const m = Array.isArray(v) ? v.join("، ") : String(v);
+      return k === "non_field_errors" || k === "detail" ? m : `${k}: ${m}`;
+    });
+    if (parts.length) return parts.join(" | ");
+  }
+  return "عملیات انجام نشد، دوباره تلاش کنید.";
+}

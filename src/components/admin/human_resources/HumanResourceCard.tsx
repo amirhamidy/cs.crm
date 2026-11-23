@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { ExternalLink, FileText, GitBranch, Pencil, Trash2, Users, X } from "lucide-react";
+import { ExternalLink, FileText, GitBranch, Pencil, UserCog, Trash2, Users, X } from "lucide-react";
 import { Department, HumanResource, deleteDocumentFile } from "./humanResourceApi";
 import { gradientOf, initialOf } from "./hrUtils";
 
@@ -13,12 +13,13 @@ interface Props {
     onEdit: () => void;
     onDelete: () => void;
     onSteps: () => void;
+    onHr?: () => void;
     onChange: () => void;
 }
 
 const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition";
 
-function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onChange }: Props) {
+function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onHr, onChange }: Props) {
     const dep = departments.find((d) => d.name === document.title);
 
     const removeFile = async (id: number) => {
@@ -53,13 +54,18 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                                         <Users size={10} className="text-gray-400" />
                                     </span>
                                     <span className="truncate text-[10.5px] font-semibold text-gray-400">
-                                        {dep ? `دپارتمان ${dep.name}` : "قابل مشاهده برای همه"}
+                                        {document.employee_name ? `شخص: ${document.employee_name}` : dep ? `دپارتمان ${dep.name}` : "قابل مشاهده برای همه"}
                                     </span>
                                 </div>
                             </div>
 
                             {canManage && (
                                 <div className="flex shrink-0 items-center gap-1">
+                                    {onHr && (
+                                        <button type="button" onClick={onHr} title="اطلاعات حقوق و مرخصی" className={`${iconBtn} hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10`}>
+                                            <UserCog size={13} />
+                                        </button>
+                                    )}
                                     <button type="button" onClick={onEdit} className={`${iconBtn} hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-500/10`}>
                                         <Pencil size={13} />
                                     </button>

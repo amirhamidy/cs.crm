@@ -51,18 +51,17 @@ export default function LeavesTab({ canManage }: { canManage: boolean }) {
   const act = async (fn: () => Promise<unknown>) => {
     try { setErr(null); await fn(); list.reload(); } catch (e) { setErr(errorMessage(e)); }
   };
-  const sel = "h-10 rounded-xl border border-gray-100 bg-gray-50 px-3 text-[12px] font-bold dark:border-white/[0.06] dark:bg-white/[0.03]";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select className="!w-auto min-w-[160px]" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">همه وضعیت‌ها</option>
           {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select className={sel} value={type} onChange={(e) => setType(e.target.value)}>
+        </Select>
+        <Select className="!w-auto min-w-[160px]" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">همه انواع</option><option value="paid">با حقوق</option><option value="unpaid">بدون حقوق</option>
-        </select>
+        </Select>
         <PrimaryButton className="mr-auto" onClick={() => setOpen(true)}><Plus size={14} />ثبت مرخصی</PrimaryButton>
       </div>
       <ErrorBox message={err || list.error} />

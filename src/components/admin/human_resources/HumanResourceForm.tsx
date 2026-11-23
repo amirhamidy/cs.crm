@@ -262,7 +262,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
 
                     <div className="flex-1 overflow-y-auto px-8 pb-2">
                         <div className="flex flex-col gap-4">
-                            <NiceSelect value={departmentId} departments={departments} onChange={handleDepartmentChange} />
+                            <p className="rounded-full bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-300 px-4 py-2 text-[11.5px] font-bold text-indigo-600">در این بخش معمولاً نام کارمند وارد می‌شود؛ منبع برای همین منظور ثبت می‌شود.</p>
 
                             <div>
                                 <label className="mb-2 block text-[11.5px] font-bold text-gray-400">عنوان منبع انسانی</label>
@@ -270,9 +270,9 @@ export default function HumanResourceForm({ open, document, departments, onClose
                                     <input
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        readOnly={!!departmentId}
+                                        
                                         placeholder=" "
-                                        className={`peer h-[52px] w-full rounded-2xl border bg-gray-50 px-4 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white ${departmentId ? "cursor-not-allowed opacity-70" : "border-gray-100 focus:border-indigo-500"}`}
+                                        className={`peer h-[52px] w-full rounded-full border bg-white px-5 pt-4 text-[12.5px] font-bold text-gray-900 outline-none transition-colors dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white ${departmentId ? "cursor-not-allowed opacity-70" : "border-gray-100 focus:border-indigo-500"}`}
                                     />
                                     <label className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-gray-400 transition-all duration-200 peer-focus:top-[15px] peer-focus:text-[10px] peer-focus:text-indigo-500 peer-[:not(:placeholder-shown)]:top-[15px] peer-[:not(:placeholder-shown)]:text-[10px]">
                                         عنوان منبع

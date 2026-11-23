@@ -5,7 +5,7 @@ import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import ProfileForm from "./ProfileForm";
 import ProfileDetail from "./ProfileDetail";
-import { Badge, EmptyState, ErrorBox, PrimaryButton, TextInput } from "./hrUi";
+import { Badge, EmptyState, ErrorBox, PrimaryButton, Select, TextInput } from "./hrUi";
 import { hrApi, errorMessage, fmtDate, fmtNum, personOf, PERIOD_LABEL, type HRProfile } from "./hrApi";
 
 export default function ProfilesTab({ canManage }: { canManage: boolean }) {
@@ -29,9 +29,9 @@ export default function ProfilesTab({ canManage }: { canManage: boolean }) {
           <Search size={14} className="absolute right-3 top-3 text-gray-400" />
           <TextInput className="pr-9" placeholder="جستجوی نام..." value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="h-10 rounded-xl border border-gray-100 bg-gray-50 px-3 text-[12px] font-bold dark:border-white/[0.06] dark:bg-white/[0.03]" value={active} onChange={(e) => setActive(e.target.value)}>
+        <Select className="!w-auto min-w-[160px]" value={active} onChange={(e) => setActive(e.target.value)}>
           <option value="">همه</option><option value="true">فعال</option><option value="false">غیرفعال</option>
-        </select>
+        </Select>
         {canManage && <PrimaryButton onClick={() => setForm({ open: true, item: null })}><Plus size={14} />پرونده جدید</PrimaryButton>}
       </div>
       <ErrorBox message={err || list.error} />
