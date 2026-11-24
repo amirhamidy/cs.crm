@@ -9,6 +9,7 @@ import {
     getHrInfo, getHrLeaves, getHrSalaries, hrErrorMessage, updateHrInfo,
 } from "./humanResourceApi";
 import WasteSummaryPanel from "./hr/WasteSummaryPanel";
+import { fmtNum } from "./hr/hrApi";
 import { ErrorBox, Field, PrimaryButton, Select, TextInput } from "./hr/hrUi";
 
 interface Props {
@@ -22,7 +23,7 @@ interface Props {
 type Tab = "info" | "salaries" | "leaves" | "waste";
 
 const fmt = (v: string | number | null | undefined) =>
-    v === null || v === undefined || v === "" ? "—" : Math.round(Number(v)).toLocaleString("fa-IR");
+    v === null || v === undefined || v === "" ? "—" : fmtNum(v);
 
 const th = "px-3 py-2 text-right text-[10.5px] font-extrabold text-gray-400";
 const td = "px-3 py-2 text-[11.5px] font-bold text-gray-700 dark:text-gray-200";
@@ -102,13 +103,13 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
             </Field>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <Field label="ساعت کار روزانه">
-                    <TextInput type="number" min={0} max={24} step={1} value={f.daily} onChange={setNum("daily")} />
+                    <TextInput type="number" min={0} max={24} decimal value={f.daily} onChange={setNum("daily")} />
                 </Field>
                 <Field label="نرخ هر ساعت اضافه‌کار">
-                    <TextInput type="number" min={0} step={1} value={f.overtime} onChange={setNum("overtime")} />
+                    <TextInput type="number" min={0} value={f.overtime} onChange={setNum("overtime")} />
                 </Field>
                 <Field label="ساعت کار اصناف">
-                    <TextInput type="number" min={0} step={1} value={f.guild} onChange={setNum("guild")} />
+                    <TextInput type="number" min={0} value={f.guild} onChange={setNum("guild")} />
                 </Field>
             </div>
             <Field label="فایل قرارداد" hint="ابتدا فایل را در کارت منبع آپلود کنید، سپس اینجا انتخاب کنید.">
@@ -170,7 +171,7 @@ function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => vo
                         <option value="daily">روزانه</option>
                     </Select>
                 </Field>
-                <Field label="مبلغ"><TextInput type="number" min={0} step={1} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/\D/g, "") })} /></Field>
+                <Field label="مبلغ"><TextInput type="number" min={0} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/\D/g, "") })} /></Field>
                 <Field label="شروع اعتبار"><TextInput type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field>
                 <Field label="یادداشت"><TextInput value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
             </div>
@@ -259,7 +260,7 @@ function LeavesTab({ doc }: { doc: HumanResource }) {
                 </Field>
                 <Field label={hourly ? "تاریخ" : "از تاریخ"}><TextInput type="date" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} /></Field>
                 {hourly ? (
-                    <Field label="تعداد ساعت"><TextInput type="number" min={0} max={24} step={1} value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value.replace(/\D/g, "") })} /></Field>
+                    <Field label="تعداد ساعت"><TextInput type="number" min={0} max={24} decimal value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value })} /></Field>
                 ) : (
                     <Field label="تا تاریخ"><TextInput type="date" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} /></Field>
                 )}

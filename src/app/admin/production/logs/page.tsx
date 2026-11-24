@@ -1,5 +1,6 @@
 "use client";
 
+import { CARD } from "@/components/ui/ds";
 import { formatProductionInteger, formatProductionLogHours } from "@/lib/productionFormat";
 
 import Pagination from "@/components/ui/Pagination";
@@ -121,7 +122,7 @@ export default function LogsPage() {
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <div className={`${CARD} p-4`}>
                 <div className="mb-3 flex items-center gap-2 text-[11.5px] font-bold text-gray-500">
                     <Filter size={13} />
                     فیلترها
@@ -211,7 +212,7 @@ export default function LogsPage() {
             </div>
 
             {loadError && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-600">{loadError}</p>}
-            <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#fafafa] dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <div className={`${CARD} overflow-hidden`}>
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1400px] border-collapse text-right text-[12px]">
                         <thead>

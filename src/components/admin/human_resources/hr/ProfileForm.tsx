@@ -42,15 +42,15 @@ export default function ProfileForm({ open, profile, onClose, onSaved }: {
         <ErrorBox message={err} />
         {!editing && (
           <Field label="شناسه شخص (Person)" hint="شناسه شخص ثبت‌شده در سیستم">
-            <TextInput type="number" min={1} value={personId} onChange={(e) => setPersonId(e.target.value)} />
+            <TextInput type="number" group={false} min={1} value={personId} onChange={(e) => setPersonId(e.target.value)} />
           </Field>
         )}
         <Field label="کاربر سیستم (اختیاری)">
-          <TextInput type="number" min={1} placeholder="شناسه کاربر" value={employee ?? ""} onChange={(e) => setEmployee(e.target.value ? Number(e.target.value) : null)} />
+          <TextInput type="number" group={false} min={1} placeholder="شناسه کاربر" value={employee ?? ""} onChange={(e) => setEmployee(e.target.value ? Number(e.target.value) : null)} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="تاریخ استخدام"><TextInput type="date" value={hire} onChange={(e) => setHire(e.target.value)} /></Field>
-          <Field label="ساعت کار روزانه"><TextInput type="number" step="0.25" value={daily} onChange={(e) => setDaily(e.target.value)} /></Field>
+          <Field label="ساعت کار روزانه"><TextInput type="number" decimal group={false} value={daily} onChange={(e) => setDaily(e.target.value)} /></Field>
           <Field label="نرخ اضافه‌کاری (هر ساعت)"><TextInput type="number" value={rate} onChange={(e) => setRate(e.target.value)} /></Field>
           <Field label="ساعت قانونی ماهانه" hint="مثلاً بر اساس ساعت کار اصناف"><TextInput type="number" value={legal} onChange={(e) => setLegal(e.target.value)} /></Field>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Plus, Search, Users, Pencil, Trash2, Eye } from "lucide-react";
+import { CARD } from "@/components/ui/ds";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import ProfileForm from "./ProfileForm";
@@ -42,7 +43,7 @@ export default function ProfilesTab({ canManage }: { canManage: boolean }) {
           {list.items.map((p) => {
             const sal = p.current_salary;
             return (
-              <div key={p.id} className="rounded-[1.45rem] border border-gray-100 bg-white p-4 dark:border-white/[0.07] dark:bg-[#111827]">
+              <div key={p.id} className={`${CARD} p-4`}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-[13px] font-extrabold text-gray-800 dark:text-white">{personOf(p.person).name}</h3>
                   <Badge className={p.is_active ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"}>{p.is_active ? "فعال" : "غیرفعال"}</Badge>

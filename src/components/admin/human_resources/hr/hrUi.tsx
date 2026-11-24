@@ -1,12 +1,75 @@
 "use client";
 
-import { Children, type ReactElement, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
+import { useLayoutEffect, useRef, Children, type ReactElement, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 import NiceSelect from "./NiceSelect";
+export { EmptyState, ErrorBox } from "@/components/ui/States";
 import JalaliDatePicker from "./JalaliDatePicker";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const inputCls =
-  "h-11 w-full rounded-full border border-gray-200 bg-white px-5 text-sm text-black outline-none transition-all duration-200 focus:border-gray-400 disabled:opacity-60 dark:border-white/10 dark:bg-[#0b1220] dark:text-white dark:focus:border-white/30";
+  "h-11 w-full rounded-full border border-gray-200 bg-white px-5 text-sm text-black outline-none transition-all duration-200 hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:opacity-60 dark:border-white/10 dark:bg-[#0b1220] dark:text-white dark:hover:border-white/20 dark:focus:border-white/30 dark:focus:ring-white/5";
+
+const FA = "۰۱۲۳۴۵۶۷۸۹";
+const toEn = (s: string) =>
+  s.replace(/[۰-۹]/g, (d) => String(FA.indexOf(d))).replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660));
+const toFa = (s: string) => s.replace(/[0-9]/g, (d) => FA[+d]);
+const sepInt = (s: string) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const sep = (s: string) => {
+  const [i, d] = s.split(".");
+  return d === undefined ? sepInt(i) : sepInt(i) + "." + d;
+};
+const clean = (s: string, decimal: boolean) => {
+  let t = toEn(s).replace(/[٫\/]/g, ".");
+  if (!decimal) return t.replace(/\D/g, "");
+  t = t.replace(/[^\d.]/g, "");
+  const k = t.indexOf(".");
+  if (k >= 0) t = t.slice(0, k + 1) + t.slice(k + 1).replace(/\./g, "").slice(0, 2);
+  return t;
+};
+const toFaD = (s: string) => toFa(s).replace(/\./g, "٫");
+
+type NumProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { group?: boolean; decimal?: boolean };
+
+/** Integer-only input: Persian digits, thousands separators, no spinner / wheel changes. */
+function NumberInput({ group = true, decimal = false, value, onChange, min, max, step, className, ...rest }: NumProps) {
+  const ref = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  const raw = clean(String(value ?? ""), decimal);
+  const shown = toFaD(group ? sep(raw) : raw);
+
+  useLayoutEffect(() => {
+    if (caret.current !== null && ref.current && document.activeElement === ref.current) {
+      ref.current.setSelectionRange(caret.current, caret.current);
+    }
+    caret.current = null;
+  });
+
+  return (
+    <input
+      {...rest}
+      ref={ref}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      value={shown}
+      onWheel={(e) => e.currentTarget.blur()}
+      onChange={(e) => {
+        const el = e.target;
+        const pos = el.selectionStart ?? el.value.length;
+        const before = clean(el.value.slice(0, pos), decimal).length;
+        let next = clean(el.value, decimal).replace(/^0+(?=\d)/, "");
+        if (next.startsWith(".")) next = "0" + next;
+        if (max !== undefined && next !== "" && Number(next) > Number(max)) next = String(max);
+        const f = toFaD(group ? sep(next) : next);
+        let seen = 0, idx = 0;
+        while (idx < f.length && seen < before) { if (/[۰-۹٫]/.test(f[idx])) seen++; idx++; }
+        caret.current = idx;
+        onChange?.({ target: { value: next }, currentTarget: { value: next } } as never);
+      }}
+      className={`${inputCls} text-right font-bold ${className ?? ""}`}
+    />
+  );
+}
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -18,12 +81,14 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-export const TextInput = (p: InputHTMLAttributes<HTMLInputElement>) =>
-  p.type === "date" ? (
+export const TextInput = (p: InputHTMLAttributes<HTMLInputElement> & { group?: boolean; decimal?: boolean }) =>
+  p.type === "number" ? (
+    <NumberInput {...(p as NumProps)} />
+  ) : p.type === "date" ? (
     <JalaliDatePicker value={String(p.value ?? "")} required={p.required} disabled={p.disabled}
       onChange={(v) => p.onChange?.({ target: { value: v } } as never)} />
   ) : (
-    <input {...p} className={`${inputCls} ${p.className ?? ""}`} />
+    <input {...(({ group: _g, decimal: _d, ...r }) => r)(p)} className={`${inputCls} ${p.className ?? ""}`} />
   );
 
 export const Select = ({ children, value, onChange, className, disabled }: SelectHTMLAttributes<HTMLSelectElement>) => {
@@ -35,16 +100,6 @@ export const Select = ({ children, value, onChange, className, disabled }: Selec
   return <NiceSelect value={String(value ?? "")} options={options} disabled={disabled} className={className}
     onChange={(v) => onChange?.({ target: { value: v } } as never)} />;
 };
-
-export function ErrorBox({ message }: { message: string | null }) {
-  if (!message) return null;
-  return (
-    <div className="flex items-start gap-2 rounded-full bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
-      <AlertCircle size={14} className="mt-0.5 shrink-0" />
-      <span>{message}</span>
-    </div>
-  );
-}
 
 export function PrimaryButton({
   loading,
@@ -70,18 +125,6 @@ export function GhostButton(p: React.ButtonHTMLAttributes<HTMLButtonElement>) {
       {...p}
       className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-gray-200 px-5 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 ${p.className ?? ""}`}
     />
-  );
-}
-
-export function EmptyState({ icon, title, text }: { icon: ReactNode; title: string; text?: string }) {
-  return (
-    <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-gray-200 bg-white text-center dark:border-white/[0.07] dark:bg-[#111827]">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-400 dark:bg-indigo-500/10">
-        {icon}
-      </div>
-      <h3 className="text-[12.5px] font-extrabold text-gray-800 dark:text-white">{title}</h3>
-      {text && <p className="mt-1.5 max-w-xs text-[10.5px] font-semibold leading-5 text-gray-400">{text}</p>}
-    </div>
   );
 }
 

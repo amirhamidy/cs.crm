@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, CalendarOff, ChevronLeft, Search, UserCog, Wallet } from "lucide-react";
+import { CalendarOff, ChevronLeft, UserCog, Wallet } from "lucide-react";
 import HumanResourceHrModal from "./HumanResourceHrModal";
 import { HumanResource, getDocumentsPage } from "./humanResourceApi";
 import { gradientOf, initialOf } from "./hrUtils";
@@ -10,6 +10,7 @@ import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import SearchInput from "@/components/ui/SearchInput";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 
 export type HrSection = "info" | "salaries" | "leaves";
 
@@ -48,16 +49,9 @@ export default function HrSectionPage({ section }: { section: HrSection }) {
             {loading ? (
                 <CardSkeletonGrid count={PAGE_SIZE} className={GRID} />
             ) : error ? (
-                <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-[2rem] border border-rose-100 bg-white dark:border-rose-500/20 dark:bg-[#111827]">
-                    <AlertCircle size={19} className="text-rose-500" />
-                    <p className="text-[12px] font-extrabold text-gray-800 dark:text-white">خطا در دریافت اطلاعات</p>
-                    <button type="button" onClick={refetch} className="h-8 rounded-full bg-indigo-600 px-4 text-[11px] font-extrabold text-white">تلاش مجدد</button>
-                </div>
+                <ErrorState onRetry={refetch} />
             ) : data.length === 0 ? (
-                <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-gray-200 bg-white dark:border-white/[0.07] dark:bg-[#111827]">
-                    <Search size={19} className="mb-2 text-indigo-400" />
-                    <p className="text-[12px] font-extrabold text-gray-800 dark:text-white">موردی پیدا نشد</p>
-                </div>
+                <EmptyState title="موردی پیدا نشد" />
             ) : (
                 <div className={GRID}>
                     {data.map((d, i) => (

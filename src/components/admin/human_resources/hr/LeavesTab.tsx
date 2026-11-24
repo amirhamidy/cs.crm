@@ -28,12 +28,12 @@ function LeaveForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       <form onSubmit={submit} className="space-y-3 p-6" dir="rtl">
         <ErrorBox message={err} />
         <div className="grid grid-cols-2 gap-3">
-          <Field label="شناسه پرونده پرسنلی"><TextInput type="number" required value={f.profile} onChange={(e) => set("profile", e.target.value)} /></Field>
+          <Field label="شناسه پرونده پرسنلی"><TextInput type="number" group={false} required value={f.profile} onChange={(e) => set("profile", e.target.value)} /></Field>
           <Field label="نوع"><Select value={f.leave_type} onChange={(e) => set("leave_type", e.target.value)}>
             <option value="paid">با حقوق</option><option value="unpaid">بدون حقوق</option></Select></Field>
           <Field label="از تاریخ"><TextInput type="date" required value={f.start_date} onChange={(e) => set("start_date", e.target.value)} /></Field>
           <Field label="تا تاریخ"><TextInput type="date" value={f.end_date} onChange={(e) => set("end_date", e.target.value)} /></Field>
-          <Field label="ساعت (مرخصی ساعتی)"><TextInput type="number" step="0.25" value={f.hours} onChange={(e) => set("hours", e.target.value)} /></Field>
+          <Field label="ساعت (مرخصی ساعتی)"><TextInput type="number" decimal group={false} value={f.hours} onChange={(e) => set("hours", e.target.value)} /></Field>
         </div>
         <Field label="توضیحات"><TextInput value={f.reason} onChange={(e) => set("reason", e.target.value)} /></Field>
         <div className="flex justify-end gap-2"><GhostButton onClick={onClose}>انصراف</GhostButton><PrimaryButton type="submit" loading={busy}>ثبت</PrimaryButton></div>

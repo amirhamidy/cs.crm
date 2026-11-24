@@ -6,6 +6,7 @@ import { AlertTriangle, CalendarDays, Check, Eye, Trash2, X } from "lucide-react
 import { AnimatePresence, motion } from "framer-motion";
 import { gradientOf, initialOf } from "../hrUtils";
 import GlassModal from "@/components/customcomponents/shared/GlassModal";
+import { CARD, CARD_HOVER } from "@/components/ui/ds";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
@@ -119,7 +120,7 @@ function WasteList({ canManage }: { canManage: boolean }) {
             {list.items.map((r) => (
               <motion.div key={r.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
                 whileHover={{ y: -3 }} transition={{ type: "spring", damping: 24, stiffness: 260 }}
-                className="overflow-hidden rounded-[1.45rem] border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/[0.04] dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
+                className={`overflow-hidden ${CARD} ${CARD_HOVER}`} dir="rtl">
                 <div className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradientOf(r.document_id ?? r.id)} text-[14px] font-extrabold text-white shadow-sm`}>

@@ -105,6 +105,17 @@ export interface WasteBucket {
 export interface WasteSummaryPeriod extends WasteBucket {
   key: string; label: string; date_from: string; date_to: string;
   base_salary?: string | null; net_after_waste?: string | null;
+  expected_work_hours?: string | null; production_work_hours?: string | null;
+  approved_work_hours?: string | null; work_hours_shortage?: string | null;
+  work_hours_review_status?: WorkHoursStatus | null; work_hours_deduction?: string | null;
+  net_after_work_hours?: string | null; net_after_work_hours_and_waste?: string | null;
+}
+export type WorkHoursStatus = "pending" | "approved" | "rejected";
+export interface WorkHoursReview {
+  id: number; document: number; employee_id: number; employee_name: string; month: string;
+  expected_hours: string; production_hours: string; approved_hours: string | null; shortage_hours: string;
+  status: WorkHoursStatus; status_display: string; note: string;
+  decided_by: number | null; decided_at: string | null; created_at: string; updated_at: string;
 }
 export interface WasteSummary {
   group_by: WasteGroup; date_from: string; date_to: string; employee: number | null;
@@ -139,6 +150,13 @@ export const hrApi = {
       id: number,
       d: { document: number; kind: string; start_date: string; end_date?: string | null; is_current?: boolean },
     ) => (await axiosInstance.post<HRContract>(`${ROOT}/profile/${id}/contract/`, d)).data,
+  },
+  workHours: {
+    list: (documentId: number, p: Q = {}, s?: AbortSignal) => page<WorkHoursReview>(`/document/api/v1/${documentId}/work-hours/`, p, s),
+    create: async (documentId: number, month: string) =>
+      (await axiosInstance.post<WorkHoursReview>(`/document/api/v1/${documentId}/work-hours/`, { month })).data,
+    decide: async (id: number, d: { status: "approved" | "rejected"; note?: string }) =>
+      (await axiosInstance.patch<WorkHoursReview>(`/document/api/v1/work-hours/${id}/`, d)).data,
   },
   wasteDeductions: {
     list: (p: Q = {}, s?: AbortSignal) => page<WasteDeduction>(`/document/api/v1/waste-deductions/`, p, s),
@@ -208,8 +226,8 @@ export function fmtDate(d?: string | null): string {
 export function fmtNum(v?: string | number | null): string {
   if (v === null || v === undefined || v === "") return "—";
   const n = Number(v);
-  if (isNaN(n)) return String(v);
-  return fa(n.toLocaleString("en-US", { maximumFractionDigits: 2 }));
+  if (isNaN(n)) return fa(String(v));
+  return fa(n.toLocaleString("en-US", { maximumFractionDigits: 2 })).replace(/\./g, "٫");
 }
 
 export const PERIOD_LABEL: Record<PeriodType, string> = { daily: "روزانه", monthly: "ماهانه" };

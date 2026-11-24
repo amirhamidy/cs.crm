@@ -6,7 +6,6 @@ import {
     Factory,
     AlertTriangle,
     SquarePen,
-    Loader2,
     TrendingUp,
     BarChart3,
 } from "lucide-react";
@@ -18,8 +17,11 @@ import {
     gradientOf,
     initialOf,
     StatusSwitch,
-    StatCard,
 } from "@/components/admin/production/shared";
+import StatTile from "@/components/ui/StatTile";
+import { EmptyState } from "@/components/ui/States";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { CARD, CARD_HOVER, GRID } from "@/components/ui/ds";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
 
 type DashboardTotals = { produced: number; waste: number; efficiency: number | null };
@@ -46,22 +48,21 @@ export default function DashboardPage() {
 
     return (
         <>
-        <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <StatCard
+                <StatTile
                     label="کل تولید واقعی"
                     value={totals ? formatProductionInteger(totals.produced) : "—"}
                     unit="عدد"
                     tone="emerald"
                     icon={<TrendingUp size={16} />}
                 />
-                <StatCard
+                <StatTile
                     label="راندمان کل"
                     value={totals?.efficiency == null ? "—" : `${formatProductionPercent(totals.efficiency)}٪`}
                     tone="indigo"
                     icon={<BarChart3 size={16} />}
                 />
-                <StatCard
+                <StatTile
                     label="کل ضایعات ثبت‌شده"
                     value={totals ? formatProductionInteger(totals.waste) : "—"}
                     unit="عدد"
@@ -82,22 +83,18 @@ export default function DashboardPage() {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center py-10">
-                        <Loader2 size={22} className="animate-spin text-indigo-500" />
-                    </div>
+                    <CardSkeletonGrid count={3} className={GRID} />
                 ) : machines.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
-                        هنوز ماشینی تعریف نشده. با «تعریف ماشین» شروع کنید.
-                    </div>
+                    <EmptyState title="هنوز ماشینی تعریف نشده" hint="با «تعریف ماشین» شروع کنید." />
                 ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    <div className={GRID}>
                         {machines.slice(0, 6).map((m, index) => (
                             <motion.div
                                 key={m.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: Math.min(index, 8) * 0.03 }}
-                                className="flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-[#fafafa] p-4 transition-shadow duration-200 hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
+                                className={`${CARD} ${CARD_HOVER} flex flex-col gap-3 p-4`}
                             >
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
@@ -151,7 +148,6 @@ export default function DashboardPage() {
                     </div>
                 )}
             </section>
-        </>
         </>
     );
 }

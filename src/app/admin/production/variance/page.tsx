@@ -1,10 +1,14 @@
 "use client";
 
+import { CARD, GRID } from "@/components/ui/ds";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { ErrorBox } from "@/components/ui/States";
+
 import { formatProductionInteger, formatProductionPercent, formatProductionHours } from "@/lib/productionFormat";
 
 import { useEffect, useMemo, useState } from "react";
 import { toPersianDigits } from "@/lib/jalali";
-import { Loader2, Scale, Factory, Target, TrendingUp, Trash2, RotateCcw, Clock, Gauge } from "lucide-react";
+import { Scale, Factory, Target, TrendingUp, Trash2, RotateCcw, Clock, Gauge } from "lucide-react";
 import ProductionBarChart from "@/components/charts/ProductionBarChart";
 import axiosInstance from "@/lib/axiosInstance";
 import { useProductionData } from "@/components/admin/production/ProductionContext";
@@ -132,7 +136,7 @@ export default function VariancePage() {
                 </button>
             </div>
 
-            <div className="rounded-3xl border border-black/[0.06] bg-white/60 p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <div className={`${CARD} p-4`}>
                 <div className="flex flex-wrap gap-3">
                     <div className="min-w-[170px] flex-1 basis-[170px]">
                         <span className="mb-1.5 block text-[11px] font-bold text-gray-500">مشاهده بر اساس</span>
@@ -164,8 +168,8 @@ export default function VariancePage() {
                 {usingYear && <p className="mt-3 text-[11px] text-amber-600">با انتخاب سال، بازه‌ی تاریخ نادیده گرفته می‌شود.</p>}
             </div>
 
-            {error && <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-[12px] font-bold text-red-600">{error}</p>}
-            {loading && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-gray-400" size={20} /></div>}
+            {error && <ErrorBox message={error} />}
+            {loading && <CardSkeletonGrid count={4} className={GRID} />}
 
             {data && data[focus] && (() => {
                 const t = data[focus]!.totals;

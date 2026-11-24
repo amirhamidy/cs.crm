@@ -8,9 +8,11 @@ import { motion } from "framer-motion";
 import {
     Factory,
     SquarePen,
-    Loader2,
     Trash2,
 } from "lucide-react";
+import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { EmptyState } from "@/components/ui/States";
+import { CARD, GRID } from "@/components/ui/ds";
 import { toPersianDigits } from "@/lib/jalali";
 import {
     Option,
@@ -74,25 +76,19 @@ export default function MachinesPage() {
             </div>
 
             {loading ? (
-                <div className="flex justify-center py-10">
-                    <Loader2 size={22} className="animate-spin text-indigo-500" />
-                </div>
+                <CardSkeletonGrid count={3} className={GRID} />
             ) : filteredMachines.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-[12px] text-gray-400 dark:border-white/[0.1]">
-                    ماشینی با این فیلتر یافت نشد.
-                </div>
+                <EmptyState title="ماشینی با این فیلتر یافت نشد" />
             ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className={GRID}>
                     {filteredMachines.map((m, index) => (
                         <motion.div
                             key={m.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: Math.min(index, 8) * 0.03 }}
-                            className={`flex flex-col gap-3 rounded-2xl border p-4 transition-shadow duration-200 ${m.is_active
-                                ? "border-black/[0.06] bg-[#fafafa] hover:shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_14px_40px_rgba(99,102,241,0.25)] dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_14px_44px_rgba(99,102,241,0.35)]"
-                                : "border-slate-300/40 bg-slate-50 opacity-75 dark:border-white/[0.08] dark:bg-white/[0.015]"
-                                }`}
+                            whileHover={{ y: -3 }}
+                            className={`${CARD} flex flex-col gap-3 p-4 transition-shadow hover:shadow-xl hover:shadow-black/[0.04] ${m.is_active ? "" : "opacity-70"}`}
                         >
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 items-center gap-3">

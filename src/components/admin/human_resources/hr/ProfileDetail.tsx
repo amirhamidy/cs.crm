@@ -85,7 +85,7 @@ export default function ProfileDetail({ profile, onClose, onChanged }: {
           e.preventDefault();
           run(() => hrApi.contracts.create(profile.id, { document: Number(con.document), kind: con.kind, start_date: con.start_date, end_date: con.end_date || null }));
         }}>
-          <Field label="شناسه سند"><TextInput type="number" required value={con.document} onChange={(e) => setCon({ ...con, document: e.target.value })} /></Field>
+          <Field label="شناسه سند"><TextInput type="number" group={false} required value={con.document} onChange={(e) => setCon({ ...con, document: e.target.value })} /></Field>
           <Field label="نوع"><Select value={con.kind} onChange={(e) => setCon({ ...con, kind: e.target.value })}>
             {Object.entries(CONTRACT_KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
           <Field label="شروع"><TextInput type="date" required value={con.start_date} onChange={(e) => setCon({ ...con, start_date: e.target.value })} /></Field>
@@ -103,7 +103,7 @@ export default function ProfileDetail({ profile, onClose, onChanged }: {
         ))}
         <form className="grid grid-cols-3 items-end gap-2" onSubmit={(e) => { e.preventDefault(); run(() => hrApi.overtime.create({ profile: profile.id, ...ot })); }}>
           <Field label="تاریخ"><TextInput type="date" required value={ot.date} onChange={(e) => setOt({ ...ot, date: e.target.value })} /></Field>
-          <Field label="ساعت"><TextInput type="number" step="0.25" required value={ot.hours} onChange={(e) => setOt({ ...ot, hours: e.target.value })} /></Field>
+          <Field label="ساعت"><TextInput type="number" decimal group={false} required value={ot.hours} onChange={(e) => setOt({ ...ot, hours: e.target.value })} /></Field>
           <PrimaryButton type="submit" loading={busy}>ثبت</PrimaryButton>
         </form>
       </div>
