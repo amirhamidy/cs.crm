@@ -1,6 +1,7 @@
 import axiosInstance from "@/lib/axiosInstance";
 import { cleanParams, toPaginated } from "@/lib/api/_core";
 import type { Paginated } from "@/types/pagination";
+import { toJalali, toPersianDigits } from "@/lib/jalali";
 
 const ROOT = "/hr/api/v1";
 
@@ -198,9 +199,10 @@ const fa = (s: string | number) => String(s).replace(/[0-9]/g, (d) => "۰۱۲۳�
 
 export function fmtDate(d?: string | null): string {
   if (!d) return "—";
-  const dt = new Date(`${d.slice(0, 10)}T00:00:00`);
-  if (isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString("fa-IR", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (!m) return d;
+  const [jy, jm, jd] = toJalali(+m[1], +m[2], +m[3]);
+  return toPersianDigits(`${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`);
 }
 
 export function fmtNum(v?: string | number | null): string {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarOff, UserCog, Users, Wallet } from "lucide-react";
+import { CalendarOff, Trash2, UserCog, Users, Wallet } from "lucide-react";
 
 const BASE = "/admin/human-resources";
 const TABS = [
@@ -10,6 +10,7 @@ const TABS = [
     { href: `${BASE}/info`, label: "اطلاعات", Icon: UserCog },
     { href: `${BASE}/salaries`, label: "پایه حقوق", Icon: Wallet },
     { href: `${BASE}/leaves`, label: "مرخصی", Icon: CalendarOff },
+    { href: `${BASE}/waste`, label: "کسر ضایعات", Icon: Trash2 },
 ];
 
 export default function HrTabs() {

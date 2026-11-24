@@ -1,20 +1,16 @@
 "use client";
 import { useState } from "react";
-import { CalendarOff, FileText, Trash2, Users } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import HumanResourcesPage from "../HumanResourcesPage";
-import ProfilesTab from "./ProfilesTab";
-import LeavesTab from "./LeavesTab";
 import WasteTab from "./WasteTab";
 
 const TABS = [
-  { key: "profiles", label: "پرونده‌های پرسنلی", icon: Users },
-  { key: "leaves", label: "مرخصی‌ها", icon: CalendarOff },
   { key: "waste", label: "کسر ضایعات", icon: Trash2 },
   { key: "documents", label: "اسناد و قراردادها", icon: FileText },
 ] as const;
 
 export default function HRHub({ canManage = false }: { canManage?: boolean }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("profiles");
+  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("waste");
   return (
     <div className="space-y-5 p-4 sm:p-6" dir="rtl">
       <div>
@@ -29,8 +25,6 @@ export default function HRHub({ canManage = false }: { canManage?: boolean }) {
           </button>
         ))}
       </div>
-      {tab === "profiles" && <ProfilesTab canManage={canManage} />}
-      {tab === "leaves" && <LeavesTab canManage={canManage} />}
       {tab === "waste" && <WasteTab canManage={canManage} />}
       {tab === "documents" && <HumanResourcesPage canManage={canManage} />}
     </div>

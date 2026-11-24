@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import { listAll } from "@/lib/api";
 import type { HumanResource } from "../humanResourceApi";
-import { AlertTriangle, Check, Eye, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, Eye, Trash2, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { gradientOf, initialOf } from "../hrUtils";
 import GlassModal from "@/components/customcomponents/shared/GlassModal";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
@@ -12,7 +14,7 @@ import { hrApi, errorMessage, fmtDate, fmtNum, type WasteDeduction, type WasteSt
 
 const DOC_URL = "/document/api/v1/";
 
-const LABEL: Record<WasteStatus, string> = { pending: "در انتظار تصمیم", approved: "تأیید‌شده", waived: "بخشوده" };
+const LABEL: Record<WasteStatus, string> = { pending: "در انتظار تصمیم", approved: "تأیید‌شده", waived: "کسر نشد" };
 const CLS: Record<WasteStatus, string> = {
   pending: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
   approved: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
@@ -50,8 +52,8 @@ function Detail({ row, canManage, onClose, onSaved }: { row: WasteDeduction; can
         {canManage && <div className="flex flex-wrap justify-end gap-2">
           <GhostButton onClick={onClose}>بستن</GhostButton>
           <GhostButton onClick={() => save()}>ذخیره مبلغ</GhostButton>
-          <GhostButton onClick={() => save("waived")}>بخشودن</GhostButton>
-          <PrimaryButton loading={busy} onClick={() => save("approved")}>تأیید کسر</PrimaryButton>
+          <GhostButton onClick={() => save("waived")}>کسر نشود</GhostButton>
+          <PrimaryButton loading={busy} onClick={() => save("approved")}>کسر شود</PrimaryButton>
         </div>}
       </div>
     </GlassModal>
@@ -88,19 +90,23 @@ function WasteList({ canManage }: { canManage: boolean }) {
     { status, ...(review ? { needs_review: "1" } : {}), date_from: from, date_to: to });
   const [sel, setSel] = useState<WasteDeduction | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
   const quick = async (r: WasteDeduction, st: WasteStatus) => {
-    try { setErr(null); await hrApi.wasteDeductions.update(r.id, { status: st }); list.reload(); } catch (e) { setErr(errorMessage(e)); }
+    setBusyId(r.id);
+    try { setErr(null); await hrApi.wasteDeductions.update(r.id, { status: st }); list.reload(); } catch (e) { setErr(errorMessage(e)); } finally { setBusyId(null); }
   };
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select className="!w-auto min-w-[160px]" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">همه وضعیت‌ها</option>
-          {Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </Select>
-        <TextInput className="!w-auto" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <TextInput className="!w-auto" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        <label className="flex items-center gap-1 text-[12px] font-bold text-gray-600">
+      <div className="grid grid-cols-1 gap-3 rounded-[1.45rem] border border-gray-100 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4 dark:border-white/[0.06] dark:bg-[#111827]">
+        <Field label="وضعیت">
+          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">همه وضعیت‌ها</option>
+            {Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </Select>
+        </Field>
+        <Field label="از تاریخ"><TextInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
+        <Field label="تا تاریخ"><TextInput type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+        <label className="flex h-11 items-center gap-2 text-[12px] font-bold text-gray-600 dark:text-gray-300">
           <input type="checkbox" checked={review} onChange={(e) => setReview(e.target.checked)} />نیاز به بازبینی
         </label>
       </div>
@@ -108,26 +114,42 @@ function WasteList({ canManage }: { canManage: boolean }) {
       {!list.loading && list.items.length === 0 ? (
         <EmptyState icon={<Trash2 size={20} />} title="کسر ضایعاتی ثبت نشده است" />
       ) : (
-        <div className="space-y-2">
-          {list.items.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 dark:border-white/[0.07] dark:bg-[#111827]">
-              <div>
-                <p className="text-[12.5px] font-extrabold text-gray-800 dark:text-white">{r.employee_name} • {fmtDate(r.date)}</p>
-                <p className="mt-1 text-[10.5px] font-semibold text-gray-400">
-                  {r.product_name || "—"} • اضافه {fmtNum(r.excess_qty)} • کسر {fmtNum(r.deduction_amount)}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {r.needs_review && <Badge className="bg-amber-50 text-amber-600"><AlertTriangle size={11} /> بازبینی</Badge>}
-                <Badge className={CLS[r.status]}>{LABEL[r.status]}</Badge>
-                <button title="جزئیات" className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600" onClick={() => setSel(r)}><Eye size={14} /></button>
-                {canManage && r.status === "pending" && (<>
-                  <button title="تأیید" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600" onClick={() => quick(r, "approved")}><Check size={14} /></button>
-                  <button title="بخشودن" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600" onClick={() => quick(r, "waived")}><X size={14} /></button>
-                </>)}
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AnimatePresence initial={false}>
+            {list.items.map((r) => (
+              <motion.div key={r.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
+                whileHover={{ y: -3 }} transition={{ type: "spring", damping: 24, stiffness: 260 }}
+                className="overflow-hidden rounded-[1.45rem] border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/[0.04] dark:border-white/[0.06] dark:bg-[#111827]" dir="rtl">
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradientOf(r.document_id ?? r.id)} text-[14px] font-extrabold text-white shadow-sm`}>
+                      {initialOf(r.employee_name, "؟")}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-[13px] font-extrabold text-gray-900 dark:text-white">{r.employee_name}</h3>
+                      <p className="mt-1 flex items-center gap-1 text-[10.5px] font-semibold text-gray-400"><CalendarDays size={11} />{fmtDate(r.date)} • {r.product_name || "—"}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className={CLS[r.status]}>{LABEL[r.status]}</Badge>
+                      {r.needs_review && <Badge className="bg-amber-50 text-amber-600"><AlertTriangle size={11} /> بازبینی</Badge>}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-gray-50 p-2 dark:bg-white/5"><p className="text-[10px] font-bold text-gray-400">ضایعات اضافه</p><p className="mt-0.5 text-[12px] font-extrabold text-gray-800 dark:text-white">{fmtNum(r.excess_qty)}</p></div>
+                    <div className="rounded-xl bg-gray-50 p-2 dark:bg-white/5"><p className="text-[10px] font-bold text-gray-400">محاسبه‌شده</p><p className="mt-0.5 text-[12px] font-extrabold text-gray-800 dark:text-white">{fmtNum(r.calculated_amount)}</p></div>
+                    <div className="rounded-xl bg-rose-50 p-2 dark:bg-rose-500/10"><p className="text-[10px] font-bold text-rose-400">مبلغ کسر</p><p className="mt-0.5 text-[12px] font-extrabold text-rose-600">{fmtNum(r.deduction_amount)}</p></div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <GhostButton onClick={() => setSel(r)}><Eye size={13} /> جزئیات</GhostButton>
+                    {canManage && r.status === "pending" && (<>
+                      <button disabled={busyId === r.id} className="flex h-9 items-center gap-1 rounded-full bg-gray-100 px-4 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-white/10 dark:text-gray-200" onClick={() => quick(r, "waived")}><X size={13} /> کسر نشود</button>
+                      <button disabled={busyId === r.id} className="flex h-9 items-center gap-1 rounded-full bg-emerald-600 px-4 text-[12px] font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50" onClick={() => quick(r, "approved")}><Check size={13} /> کسر شود</button>
+                    </>)}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
       <Pager page={list.page} pages={list.pages} onChange={list.setPage} />

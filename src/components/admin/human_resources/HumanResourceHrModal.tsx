@@ -88,7 +88,9 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
 
     if (loading) return <div className="flex justify-center py-10"><Loader2 className="animate-spin text-indigo-500" /></div>;
 
-    const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value.replace(/\D/g, "") }));
+    const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value }));
+    const setNum = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value.replace(/[^\d.]/g, "") }));
+    const dateBad = !!f.start && !!f.end && f.end < f.start;
 
     return (
         <div className="flex flex-col gap-5 pt-2">
@@ -100,13 +102,13 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
             </Field>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <Field label="ساعت کار روزانه">
-                    <TextInput type="number" min={0} max={24} step={1} value={f.daily} onChange={set("daily")} />
+                    <TextInput type="number" min={0} max={24} step={1} value={f.daily} onChange={setNum("daily")} />
                 </Field>
                 <Field label="نرخ هر ساعت اضافه‌کار">
-                    <TextInput type="number" min={0} step={1} value={f.overtime} onChange={set("overtime")} />
+                    <TextInput type="number" min={0} step={1} value={f.overtime} onChange={setNum("overtime")} />
                 </Field>
                 <Field label="ساعت کار اصناف">
-                    <TextInput type="number" min={0} step={1} value={f.guild} onChange={set("guild")} />
+                    <TextInput type="number" min={0} step={1} value={f.guild} onChange={setNum("guild")} />
                 </Field>
             </div>
             <Field label="فایل قرارداد" hint="ابتدا فایل را در کارت منبع آپلود کنید، سپس اینجا انتخاب کنید.">
@@ -124,9 +126,10 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
                     پایه حقوق فعلی: {fmt(info.current_salary.amount)} ({info.current_salary.period_type_display})
                 </div>
             )}
+            {dateBad && <p className="text-[11px] font-bold text-rose-600">پایان قرارداد نمی‌تواند قبل از شروع باشد.</p>}
             <ErrorBox message={err} />
             {ok && <p className="text-[11px] font-bold text-emerald-600">ذخیره شد.</p>}
-            <PrimaryButton type="button" loading={saving} onClick={save}>ذخیره اطلاعات</PrimaryButton>
+            <PrimaryButton type="button" loading={saving} disabled={dateBad} onClick={save}>ذخیره اطلاعات</PrimaryButton>
         </div>
     );
 }

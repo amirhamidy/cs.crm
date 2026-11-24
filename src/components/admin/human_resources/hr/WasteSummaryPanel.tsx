@@ -66,7 +66,7 @@ export default function WasteSummaryPanel({ documentId }: { documentId: number |
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {([["تعداد ردیف", fmtNum(t.count)], ["ضایعات اضافه", fmtNum(t.excess_qty)],
             ["تأییدشده (قطعی)", fmtNum(t.approved_amount)], ["در انتظار (احتمالی)", fmtNum(t.pending_amount)],
-            ["بخشوده", fmtNum(t.waived_amount)], ["محاسبه‌شده", fmtNum(t.calculated_amount)],
+            ["کسر نشد", fmtNum(t.waived_amount)], ["محاسبه‌شده", fmtNum(t.calculated_amount)],
             ["نیاز به بازبینی", fmtNum(t.needs_review)]] as [string, string][]).map(([l, v]) => (
             <div key={l} className="rounded-xl border border-gray-100 p-3 dark:border-white/[0.07]">
               <p className="text-[10px] font-bold text-gray-400">{l}</p>
@@ -77,7 +77,7 @@ export default function WasteSummaryPanel({ documentId }: { documentId: number |
           <table className="w-full min-w-[640px]">
             <thead className="bg-gray-50 dark:bg-white/5"><tr>
               <th className={th}>دوره</th><th className={th}>ضایعات</th><th className={th}>اضافه</th>
-              <th className={th}>تأییدشده</th><th className={th}>در انتظار</th><th className={th}>بخشوده</th>
+              <th className={th}>تأییدشده</th><th className={th}>در انتظار</th><th className={th}>کسر نشد</th>
               {monthly && <><th className={th}>حقوق پایه</th><th className={th}>خالص</th></>}
             </tr></thead>
             <tbody>
