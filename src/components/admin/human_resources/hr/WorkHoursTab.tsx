@@ -7,6 +7,7 @@ import type { HumanResource } from "../humanResourceApi";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
 import { WH_LABEL, WH_CLS, monthLabel } from "./workHoursShared";
 import Pager from "./Pager";
+import JalaliMonthPicker from "./JalaliMonthPicker";
 import { hrApi, errorMessage, fmtNum, type WorkHoursReview, type WorkHoursStatus } from "./hrApi";
 
 const DOC_URL = "/document/api/v1/";
@@ -40,7 +41,7 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
       const r = await hrApi.workHours.list(Number(docId), { status, page: pg, page_size: 20, month_from: iso(from, false), month_to: iso(to, true) });
       setItems(r.results); setPages(Math.max(1, Math.ceil(r.count / 20)));
     }
-    catch (e) { setItems([]); setErr(errorMessage(e)); }
+    catch (e) { setItems([]); setErr((e as { response?: { status?: number } })?.response?.status === 404 ? "سرویس ساعت کارکرد روی سرور فعال نیست (۴۰۴). بک‌اند جدید را deploy و migrate 0006 را اجرا کنید." : errorMessage(e)); }
     finally { setLoading(false); }
   }, [docId, status, pg, from, to]);
   useEffect(() => { setPg(1); }, [docId, status, from, to]);
@@ -70,8 +71,8 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
         <Field label="وضعیت"><Select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">همه</option>
           {Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
-        <Field label="از ماه (مثلاً 1405-01)"><TextInput value={from} placeholder="1405-01" onChange={(e) => setFrom(/^\d{4}-\d{1,2}$/.test(e.target.value) ? e.target.value : e.target.value.replace(/[^\d-]/g, ""))} /></Field>
-        <Field label="تا ماه"><TextInput value={to} placeholder="1405-12" onChange={(e) => setTo(e.target.value.replace(/[^\d-]/g, ""))} /></Field>
+        <Field label="از ماه"><JalaliMonthPicker value={from} onChange={setFrom} placeholder="مثلاً فروردین ۱۴۰۵" /></Field>
+        <Field label="تا ماه"><JalaliMonthPicker value={to} onChange={setTo} placeholder="مثلاً اسفند ۱۴۰۵" /></Field>
         {canManage && docId && (<>
           <Field label="ماه شمسی گزارش"><div className="flex gap-2">
             <Select value={month} onChange={(e) => setMonth(e.target.value)}>
