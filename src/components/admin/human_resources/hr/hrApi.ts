@@ -88,6 +88,29 @@ export interface HROvertime {
   amount: string;
 }
 
+export type WasteStatus = "pending" | "approved" | "waived";
+export type WasteGroup = "day" | "week" | "month" | "year";
+export interface WasteDeduction {
+  id: number; production_log: number; employee: number; employee_name: string; document_id: number | null;
+  date: string; machine_name: string; product_name: string; waste_cause_name: string; log_note: string;
+  waste_qty: number; expected_waste: string; excess_qty: string; unit_price: string;
+  calculated_amount: string; deduction_amount: string; is_manual: boolean;
+  status: WasteStatus; status_display: string; needs_review: boolean; note: string; explanation: string;
+}
+export interface WasteBucket {
+  count: number; waste_qty: number; excess_qty: string; calculated_amount: string;
+  approved_amount: string; pending_amount: string; waived_amount: string; needs_review: number;
+}
+export interface WasteSummaryPeriod extends WasteBucket {
+  key: string; label: string; date_from: string; date_to: string;
+  base_salary?: string | null; net_after_waste?: string | null;
+}
+export interface WasteSummary {
+  group_by: WasteGroup; date_from: string; date_to: string; employee: number | null;
+  employee_name: string | null; totals: WasteBucket; periods: WasteSummaryPeriod[];
+}
+export type WasteSummaryParams = { group_by: WasteGroup } & (
+  | { date_from: string; date_to: string } | { year: number; month?: number });
 type Q = Record<string, string | number | boolean | undefined | null>;
 
 async function page<T>(url: string, params: Q = {}, signal?: AbortSignal): Promise<Paginated<T>> {
@@ -115,6 +138,13 @@ export const hrApi = {
       id: number,
       d: { document: number; kind: string; start_date: string; end_date?: string | null; is_current?: boolean },
     ) => (await axiosInstance.post<HRContract>(`${ROOT}/profile/${id}/contract/`, d)).data,
+  },
+  wasteDeductions: {
+    list: (p: Q = {}, s?: AbortSignal) => page<WasteDeduction>(`/document/api/v1/waste-deductions/`, p, s),
+    update: async (id: number, d: { status?: WasteStatus; deduction_amount?: string; note?: string }) =>
+      (await axiosInstance.patch<WasteDeduction>(`/document/api/v1/waste-deductions/${id}/`, d)).data,
+    summary: async (documentId: number, p: WasteSummaryParams) =>
+      (await axiosInstance.get<WasteSummary>(`/document/api/v1/${documentId}/waste-deductions/summary/`, { params: p })).data,
   },
   leaves: {
     list: (p: Q = {}, s?: AbortSignal) => page<HRLeave>(`${ROOT}/leave/`, p, s),

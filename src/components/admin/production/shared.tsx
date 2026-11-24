@@ -83,6 +83,8 @@ export interface ProductionLog {
     note: string;
     expected_production: string;
     expected_waste: string;
+    excess_waste?: string | null;
+    unit_price?: string | null;
     efficiency: number | null;
     daily_standard?: number | null;
     daily_standard_reason?: string | null;

@@ -8,6 +8,7 @@ import {
     createHrLeave, createHrSalary, deleteHrLeave, deleteHrSalary, getEmployees,
     getHrInfo, getHrLeaves, getHrSalaries, hrErrorMessage, updateHrInfo,
 } from "./humanResourceApi";
+import WasteSummaryPanel from "./hr/WasteSummaryPanel";
 import { ErrorBox, Field, PrimaryButton, Select, TextInput } from "./hr/hrUi";
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
     onChange: () => void;
 }
 
-type Tab = "info" | "salaries" | "leaves";
+type Tab = "info" | "salaries" | "leaves" | "waste";
 
 const fmt = (v: string | number | null | undefined) =>
     v === null || v === undefined || v === "" ? "—" : Math.round(Number(v)).toLocaleString("fa-IR");
@@ -311,6 +312,7 @@ export default function HumanResourceHrModal({ section, open, document, onClose,
         { id: "info", label: "اطلاعات", icon: <UserCog size={13} /> },
         { id: "salaries", label: "پایه حقوق", icon: <Wallet size={13} /> },
         { id: "leaves", label: "مرخصی", icon: <CalendarOff size={13} /> },
+        { id: "waste", label: "کسر ضایعات", icon: <Trash2 size={13} /> },
     ];
 
     return (
@@ -348,6 +350,7 @@ export default function HumanResourceHrModal({ section, open, document, onClose,
                         {tab === "info" && <InfoTab doc={document} onChange={onChange} />}
                         {tab === "salaries" && <SalariesTab doc={document} onChange={onChange} />}
                         {tab === "leaves" && <LeavesTab doc={document} />}
+                        {tab === "waste" && <WasteSummaryPanel documentId={document.id} />}
                     </div>
                 </motion.div>
             </motion.div>

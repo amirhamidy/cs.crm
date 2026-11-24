@@ -227,6 +227,8 @@ export default function LogsPage() {
                                     ["انتظاری", null],
                                     ["ضایعات", "waste"],
                                     ["انتظاری", null],
+                                    ["ضایعات اضافه", null],
+                                    ["قیمت واحد", null],
                                     ["راندمان", null],
                                     ["", null],
                                 ] as [string, string | null][]).map(([h, key], i) => (
@@ -303,6 +305,12 @@ export default function LogsPage() {
                                         </td>
                                         <td className="px-4 py-3 text-gray-400">
                                             {formatProductionInteger(log.expected_waste)}
+                                        </td>
+                                        <td className="px-4 py-3 font-bold text-red-500">
+                                            {formatProductionInteger(log.excess_waste ?? 0)}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-400">
+                                            {formatProductionInteger(log.unit_price ?? 0)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <EfficiencyBadge value={log.efficiency} />
