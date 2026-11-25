@@ -614,7 +614,10 @@ export default function PersianCalendar() {
                 notes={notes}
                 events={calendarEvents}
                 onCreated={(note) => setNotes((prev) => [note, ...prev])}
-                onDeleted={(id) => setNotes((prev) => prev.filter((note) => note.id !== id))}
+                onDeleted={(id) => {
+                    setNotes((prev) => prev.filter((note) => Number(note.id) !== Number(id)));
+                    setCalendarEvents((prev) => prev.filter((event) => !(getEventType(event.type) === "note" && Number(event.id) === Number(id))));
+                }}
             />
         </>
     );

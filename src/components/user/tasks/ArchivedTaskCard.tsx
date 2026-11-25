@@ -380,6 +380,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 onClose={() => setNotesOpen(false)}
                 taskId={task.task_id}
                 taskTitle={task.title}
+                attachments={(task as unknown as { attachments?: unknown[] }).attachments}
             />
 
             <AnimatePresence>

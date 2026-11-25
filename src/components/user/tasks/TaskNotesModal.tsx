@@ -1,5 +1,6 @@
 "use client";
 
+import TaskFileButtons from "@/components/tasks/TaskFileButtons";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
@@ -39,6 +40,7 @@ interface Props {
     onClose: () => void;
     taskId: number;
     taskTitle: string;
+    attachments?: unknown[];
 }
 
 
@@ -176,7 +178,7 @@ function AttachmentUploader({ employeeId, username }: { employeeId?: number; use
     );
 }
 
-export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: Props) {
+export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle, attachments }: Props) {
     const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -292,6 +294,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-5 py-4">
+<TaskFileButtons attachments={attachments} />
                         {loading ? (
                             <ListSkeleton rows={3} />
                         ) : error ? (
@@ -397,12 +400,9 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
 
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {log.attachments.map((attachment) => (
-                                                            <a
+                                                            <button type="button" onClick={() => window.open(resolveFileUrl(attachment.file), "_blank", "noopener,noreferrer")}
                                                                 key={attachment.id}
-                                                                href={resolveFileUrl(attachment.file)}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="flex flex-col gap-1.5 rounded-xl px-2.5 py-2 text-[10.5px] font-bold transition-colors hover:opacity-80"
+                                                                className="cursor-pointer flex flex-col gap-1.5 rounded-xl px-2.5 py-2 text-[10.5px] font-bold transition-colors hover:opacity-80"
                                                                 style={{
                                                                     background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                                                                     color: isDark ? "#a5b4fc" : "#6366f1",
@@ -417,7 +417,7 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                                                                     employeeId={attachment.uploaded_by}
                                                                     username={attachment.uploaded_by_username}
                                                                 />
-                                                            </a>
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 </div>

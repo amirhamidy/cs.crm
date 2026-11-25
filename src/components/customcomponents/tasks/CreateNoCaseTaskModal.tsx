@@ -532,7 +532,8 @@ export default function CreateNoCaseTaskModal({ isOpen, onClose, onSuccess }: Pr
                                                 >
                                                     <Paperclip size={12} className="shrink-0 text-gray-400" />
                                                     <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">{f.name}</span>
-                                                    <button
+                                                    <button type="button" onClick={() => { const url = URL.createObjectURL(f); window.open(url, "_blank", "noopener,noreferrer"); setTimeout(() => URL.revokeObjectURL(url), 60000); }} className="shrink-0 cursor-pointer rounded-lg bg-blue-50 px-2.5 py-1 text-[10.5px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20">مشاهده</button>
+<button
                                                         type="button"
                                                         onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
                                                         className="shrink-0 text-gray-400 transition-colors hover:text-red-500"

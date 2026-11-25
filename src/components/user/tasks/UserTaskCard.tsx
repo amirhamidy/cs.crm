@@ -902,6 +902,7 @@ export default function UserTaskCard({
                 onClose={() => setLogsOpen(false)}
                 taskId={task.id}
                 taskTitle={task.title}
+                attachments={(task as unknown as { attachments?: unknown[] }).attachments}
             />
 
             <TaskNotesModal
@@ -909,6 +910,7 @@ export default function UserTaskCard({
                 onClose={() => setNotesOpen(false)}
                 taskId={task.id}
                 taskTitle={task.title}
+                attachments={(task as unknown as { attachments?: unknown[] }).attachments}
             />
 
             {hasCase && (

@@ -1,5 +1,6 @@
 "use client";
 
+import TaskFileButtons from "@/components/tasks/TaskFileButtons";
 import { useEffect } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
@@ -41,6 +42,7 @@ interface Props {
     onClose: () => void;
     taskId: number;
     taskTitle: string;
+    attachments?: unknown[];
 }
 
 
@@ -188,12 +190,9 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                 {log.attachments?.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                         {log.attachments.map((a) => (
-                            <a
+                            <button type="button" onClick={() => window.open(resolveFileUrl(a.file), "_blank", "noopener,noreferrer")}
                                 key={a.id}
-                                href={resolveFileUrl(a.file)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold transition-colors"
+                                className="cursor-pointer flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10.5px] font-bold transition-colors"
                                 style={{
                                     background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
                                     color: isDark ? "#a5b4fc" : "#6366f1",
@@ -201,7 +200,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
                             >
                                 <Paperclip size={11} />
                                 <span className="max-w-[140px] truncate">{a.original_file_name}</span>
-                            </a>
+                            </button>
                         ))}
                     </div>
                 )}
@@ -212,7 +211,7 @@ function LogItem({ log, isLast, isDark }: { log: TaskLog; isLast: boolean; isDar
 
 const LOGS_PAGE_SIZE = 10;
 
-export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Props) {
+export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle, attachments }: Props) {
     const reduced = useReducedMotion() ?? false;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -301,6 +300,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-5 py-5">
+<TaskFileButtons attachments={attachments} />
                         {loading ? (
                             <ListSkeleton rows={4} />
                         ) : error ? (

@@ -670,7 +670,7 @@ export default function EditTaskModal({
                             </div>
                         </div>
 
-                        <button
+<button
                             type="button"
                             onClick={handleClose}
                             disabled={submitting || success}
@@ -823,14 +823,11 @@ export default function EditTaskModal({
                                                 <span className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-gray-600 dark:text-gray-300">
                                                     {file.name || `فایل ${index + 1}`}
                                                 </span>
-                                                <a
-                                                    href={file.file}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="shrink-0 rounded-lg bg-blue-50 px-2.5 py-1 text-[10.5px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
+                                                <button type="button" onClick={() => window.open(file.file, "_blank", "noopener,noreferrer")}
+                                                    className="cursor-pointer shrink-0 rounded-lg bg-blue-50 px-2.5 py-1 text-[10.5px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
                                                 >
                                                     مشاهده
-                                                </a>
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -890,7 +887,8 @@ export default function EditTaskModal({
                                                     <span className="shrink-0 text-[10.5px] font-bold text-gray-400">
                                                         {getFileSize(f.size)}
                                                     </span>
-                                                    <button
+                                                    <button type="button" onClick={() => { const url = URL.createObjectURL(f); window.open(url, "_blank", "noopener,noreferrer"); setTimeout(() => URL.revokeObjectURL(url), 60000); }} className="shrink-0 cursor-pointer rounded-lg bg-blue-50 px-2.5 py-1 text-[10.5px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20">مشاهده</button>
+<button
                                                         type="button"
                                                         onClick={() =>
                                                             setFiles((prev) =>

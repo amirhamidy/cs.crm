@@ -275,6 +275,7 @@ export default function CalendarNoteModal({ isOpen, onClose, selectedDate, notes
                                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                                 <span className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[9.5px] font-bold ${style.bg} ${style.text} ${style.border}`}><Tag size={10} />{getTypeLabel(event.type)}</span>
                                                 <span className="rounded-lg bg-slate-500/10 px-2 py-1 text-[9px] font-bold text-slate-400">#{event.id}</span>
+{getEventType(event.type) === "note" && <button type="button" aria-label="حذف یادداشت" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id} className="mr-auto flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-rose-500/10 disabled:opacity-50">{deletingId === event.id ? <Loader2 size={14} className="animate-spin text-rose-500" /> : <Trash2 size={14} className="text-rose-500" />}</button>}
                                             </div>
                                             <div className="mt-3 grid grid-cols-2 gap-2">
                                                 {[["شروع", event.start], ["پایان", event.end]].map(([label, value]) => (
