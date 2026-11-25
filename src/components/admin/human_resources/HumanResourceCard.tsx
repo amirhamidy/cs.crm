@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ExternalLink, FileText, GitBranch, Pencil, UserCog, Trash2, Users, X } from "lucide-react";
 import { Department, HumanResource, deleteDocumentFile } from "./humanResourceApi";
 import { gradientOf, initialOf } from "./hrUtils";
+import { useDialogs } from "@/components/ui/useDialogs";
 
 interface Props {
     document: HumanResource;
@@ -20,21 +21,23 @@ interface Props {
 const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition";
 
 function HumanResourceCard({ document, departments, canManage, onEdit, onDelete, onSteps, onHr, onChange }: Props) {
+    const { confirm, dialog } = useDialogs();
     const dep = departments.find((d) => d.name === document.title);
 
     const removeFile = async (id: number) => {
-        if (!confirm("آیا از حذف فایل مطمئن هستید؟")) return;
+        if (!(await confirm({ message: "این فایل حذف شود؟", confirmText: "حذف", danger: true }))) return;
         await deleteDocumentFile(id);
         onChange();
     };
 
     return (
+        <>
         <motion.div
             layout
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            whileHover={{ y: -3 }}
+           
             transition={{ type: "spring", damping: 24, stiffness: 260 }}
             className="group overflow-hidden rounded-[1.45rem] border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/[0.04] dark:border-white/[0.06] dark:bg-[#111827] dark:hover:shadow-black/20"
             dir="rtl"
@@ -126,6 +129,8 @@ function HumanResourceCard({ document, departments, canManage, onEdit, onDelete,
                 </motion.button>
             </div>
         </motion.div>
+        {dialog}
+        </>
     );
 }
 

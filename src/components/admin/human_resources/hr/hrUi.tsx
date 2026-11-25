@@ -110,7 +110,7 @@ export function PrimaryButton({
     <button
       {...rest}
       disabled={loading || rest.disabled}
-      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 text-[12px] font-extrabold text-white transition hover:bg-indigo-500 disabled:opacity-60 ${rest.className ?? ""}`}
+      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 text-[12px] font-extrabold text-white transition hover:bg-indigo-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${rest.className ?? ""}`}
     >
       {loading && <Loader2 size={13} className="animate-spin" />}
       {children}
@@ -123,7 +123,7 @@ export function GhostButton(p: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     <button
       type="button"
       {...p}
-      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-gray-200 px-5 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 ${p.className ?? ""}`}
+      className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-gray-200 px-5 text-[12px] font-extrabold text-gray-600 transition hover:bg-gray-50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 ${p.className ?? ""}`}
     />
   );
 }

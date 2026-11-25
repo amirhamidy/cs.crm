@@ -42,7 +42,7 @@ export default function HrSectionPage({ section }: { section: HrSection }) {
                         <h1 className="text-[15px] font-extrabold text-gray-900 dark:text-white">{cur.title}</h1>
                         <p className="mt-0.5 text-[11px] text-gray-400">{cur.hint}</p>
                     </div>
-                    <SearchInput value={search} onChange={setSearch} placeholder="جستجوی نام شخص یا عنوان..." className="w-full sm:w-72" />
+                    <SearchInput value={search} onChange={setSearch} placeholder="جستجو..." className="w-full sm:w-72" />
                 </div>
             </div>
 
@@ -56,7 +56,7 @@ export default function HrSectionPage({ section }: { section: HrSection }) {
                 <div className={GRID}>
                     {data.map((d, i) => (
                         <motion.button key={d.id} type="button" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.03 }} whileHover={{ y: -3 }} onClick={() => setSelected(d)}
+                            transition={{ delay: i * 0.03 }} onClick={() => setSelected(d)}
                             className="flex items-center gap-3 rounded-[2rem] border border-gray-100 bg-white p-3 text-right shadow-sm transition-shadow hover:shadow-xl hover:shadow-black/[0.04] dark:border-white/[0.06] dark:bg-[#111827]">
                             <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradientOf(d.id)} text-[14px] font-extrabold text-white`}>
                                 {initialOf(d.employee_name || d.title, "م")}

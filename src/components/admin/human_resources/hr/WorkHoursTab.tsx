@@ -8,6 +8,7 @@ import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select,
 import { WH_LABEL, WH_CLS, monthLabel } from "./workHoursShared";
 import Pager from "./Pager";
 import JalaliMonthPicker from "./JalaliMonthPicker";
+import { useDialogs } from "@/components/ui/useDialogs";
 import { hrApi, errorMessage, fmtNum, type WorkHoursReview, type WorkHoursStatus } from "./hrApi";
 
 const DOC_URL = "/document/api/v1/";
@@ -30,6 +31,7 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
   const [busy, setBusy] = useState<number | "create" | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
+  const { confirm, dialog } = useDialogs();
 
   useEffect(() => { listAll<HumanResource>(DOC_URL).then(setDocs).catch(() => setDocs([])); }, []);
 
@@ -54,7 +56,8 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
     catch (e) { const m = errorMessage(e); setErr(/guild|ساعت مصوب|ساعت کار/.test(m) ? `${m} — ساعت مصوب ماهانه را از «فرم اطلاعات منابع انسانی» پرسنل تنظیم کنید.` : m); } finally { setBusy(null); }
   };
   const decide = async (r: WorkHoursReview, st: "approved" | "rejected") => {
-    if (!window.confirm(st === "approved" ? "با تأیید، ساعت تولید به‌عنوان ساعت تأییدشده ثبت می‌شود و قابل تغییر نیست. ادامه می‌دهید؟" : "با رد گزارش، تصمیم نهایی می‌شود و قابل تغییر نیست. ادامه می‌دهید؟")) return;
+    const ok = await confirm({ title: st === "approved" ? "تأیید گزارش" : "رد گزارش", message: st === "approved" ? "با تأیید، ساعت به‌عنوان ساعت تأییدشده ثبت می‌شود و قابل تغییر نیست." : "با رد گزارش، تصمیم نهایی می‌شود و قابل تغییر نیست.", confirmText: st === "approved" ? "تأیید" : "رد", danger: st === "rejected" });
+    if (!ok) return;
     setBusy(r.id); setErr(null);
     try { await hrApi.workHours.decide(r.id, { status: st, note: notes[r.id] ?? "" }); await load(); }
     catch (e) { setErr(errorMessage(e)); } finally { setBusy(null); }
@@ -118,6 +121,7 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
           </table>
         </div>)}
       <Pager page={pg} pages={pages} onChange={setPg} />
+      {dialog}
     </div>
   );
 }

@@ -40,7 +40,7 @@ export default function JalaliMonthPicker({ value, onChange, disabled, placehold
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ duration: 0.12 }}
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.12 }}
             className="absolute right-0 top-full z-50 mt-1.5 w-[16rem] rounded-2xl border border-gray-100 bg-white p-3 shadow-xl dark:border-white/10 dark:bg-[#1a1d27]" dir="rtl">
             <div className="mb-2 flex items-center justify-between">
               <button type="button" onClick={() => setVy(vy - 1)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"><ChevronRight size={16} /></button>

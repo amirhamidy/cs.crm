@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { gradientOf, initialOf } from "../hrUtils";
 import GlassModal from "@/components/customcomponents/shared/GlassModal";
 import { CARD, CARD_HOVER } from "@/components/ui/ds";
+import { useDialogs } from "@/components/ui/useDialogs";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
@@ -69,8 +70,8 @@ export default function WasteTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-4" dir="rtl">
       <div className="flex gap-2">
-        <GhostButton onClick={() => setView("list")}>لیست کسرها</GhostButton>
-        <GhostButton onClick={() => setView("summary")}>خلاصه به تفکیک پرسنل</GhostButton>
+        <GhostButton aria-pressed={view === "list"} className={view === "list" ? "!border-indigo-200 !bg-indigo-50 !text-indigo-700 dark:!bg-indigo-500/10" : ""} onClick={() => setView("list")}>لیست کسرها</GhostButton>
+        <GhostButton aria-pressed={view === "summary"} className={view === "summary" ? "!border-indigo-200 !bg-indigo-50 !text-indigo-700 dark:!bg-indigo-500/10" : ""} onClick={() => setView("summary")}>خلاصه به تفکیک پرسنل</GhostButton>
       </div>
       {view === "list" ? <WasteList canManage={canManage} /> : (<>
         <Field label="پرسنل"><Select value={docId} onChange={(e) => setDocId(e.target.value)}>
@@ -92,9 +93,10 @@ function WasteList({ canManage }: { canManage: boolean }) {
   const [sel, setSel] = useState<WasteDeduction | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const { toast, dialog } = useDialogs();
   const quick = async (r: WasteDeduction, st: WasteStatus) => {
     setBusyId(r.id);
-    try { setErr(null); await hrApi.wasteDeductions.update(r.id, { status: st }); list.reload(); } catch (e) { setErr(errorMessage(e)); } finally { setBusyId(null); }
+    try { setErr(null); await hrApi.wasteDeductions.update(r.id, { status: st }); toast(st === "approved" ? "کسر تأیید شد" : "کسر لغو شد"); list.reload(); } catch (e) { setErr(errorMessage(e)); } finally { setBusyId(null); }
   };
   return (
     <div className="space-y-4">
@@ -119,7 +121,7 @@ function WasteList({ canManage }: { canManage: boolean }) {
           <AnimatePresence initial={false}>
             {list.items.map((r) => (
               <motion.div key={r.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
-                whileHover={{ y: -3 }} transition={{ type: "spring", damping: 24, stiffness: 260 }}
+                transition={{ type: "spring", damping: 24, stiffness: 260 }}
                 className={`overflow-hidden ${CARD} ${CARD_HOVER}`} dir="rtl">
                 <div className="p-4">
                   <div className="flex items-start gap-3">
@@ -154,7 +156,8 @@ function WasteList({ canManage }: { canManage: boolean }) {
         </div>
       )}
       <Pager page={list.page} pages={list.pages} onChange={list.setPage} />
-      {sel && <Detail row={sel} canManage={canManage} onClose={() => setSel(null)} onSaved={() => { setSel(null); list.reload(); }} />}
+      {sel && <Detail row={sel} canManage={canManage} onClose={() => setSel(null)} onSaved={() => { setSel(null); toast("تغییرات ذخیره شد"); list.reload(); }} />}
+      {dialog}
     </div>
   );
 }

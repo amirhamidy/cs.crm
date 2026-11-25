@@ -152,7 +152,7 @@ export default function HumanResourceStepRoadmap({
                                     className={`group absolute top-1/2 w-[62%] -translate-y-1/2 ${isRight ? "right-0" : "left-0"
                                         }`}
                                 >
-                                    <div className="relative rounded-[1.2rem] border border-gray-100 bg-white/95 px-3.5 py-2.5 shadow-[0_4px_18px_-6px_rgba(99,102,241,0.25)] backdrop-blur transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-indigo-200 group-hover:shadow-[0_8px_26px_-8px_rgba(99,102,241,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:group-hover:border-indigo-500/30">
+                                    <div className="relative rounded-[1.2rem] border border-gray-100 bg-white/95 px-3.5 py-2.5 shadow-[0_4px_18px_-6px_rgba(99,102,241,0.25)] backdrop-blur transition-all duration-300 group-hover:border-indigo-200 group-hover:shadow-[0_8px_26px_-8px_rgba(99,102,241,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:group-hover:border-indigo-500/30">
                                         <div
                                             className={`absolute top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border bg-white dark:bg-[#0f172a] ${isRight
                                                     ? "-left-1 border-b border-l border-gray-100 dark:border-white/[0.08]"

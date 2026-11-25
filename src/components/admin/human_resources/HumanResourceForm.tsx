@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, FileText, Loader2, Search, Upload, X } from "lucide-react";
 import { Department, HumanResource, createDocument, updateDocument, uploadDocumentFile } from "./humanResourceApi";
 import { gradientOf, initialOf } from "./hrUtils";
+import { useDialogs } from "@/components/ui/useDialogs";
 
 interface Props {
     open: boolean;
@@ -100,9 +101,9 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
             <AnimatePresence>
                 {open && (
                     <motion.div
-                        initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                        initial={{ opacity: 0, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
                         transition={{ type: "spring", damping: 24, stiffness: 340 }}
                         className="absolute z-50 mt-2 w-full origin-top overflow-hidden rounded-[1.5rem] border border-gray-100 bg-white shadow-xl shadow-black/5 dark:border-white/[0.08] dark:bg-[#0f172a] dark:shadow-black/40"
                     >
@@ -177,6 +178,7 @@ function NiceSelect({ value, departments, onChange }: { value: string; departmen
 }
 
 export default function HumanResourceForm({ open, document, departments, onClose, onSaved }: Props) {
+    const { notify, dialog } = useDialogs();
     const [title, setTitle] = useState("");
     const [departmentId, setDepartmentId] = useState("");
     const [file, setFile] = useState<File | null>(null);
@@ -216,7 +218,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
         } catch (e) {
             const d = (e as any)?.response?.data;
             const msg = typeof d === "object" && d ? d.detail || d.title?.[0] : "";
-            alert(msg || "ذخیره‌سازی انجام نشد، دوباره تلاش کنید.");
+            notify(msg || "ذخیره‌سازی انجام نشد، دوباره تلاش کنید.", "خطا در ذخیره");
         } finally {
             setSaving(false);
         }
@@ -225,6 +227,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
     if (!open) return null;
 
     return (
+        <>
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -255,7 +258,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                                 <p className="mt-0.5 text-[11px] text-gray-400">تعیین دسترسی و اطلاعات منبع</p>
                             </div>
                         </div>
-                        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                        <button type="button" aria-label="بستن" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
                             <X size={15} />
                         </button>
                     </div>
@@ -318,5 +321,7 @@ export default function HumanResourceForm({ open, document, departments, onClose
                 </motion.div>
             </motion.div>
         </AnimatePresence>
+        {dialog}
+        </>
     );
 }

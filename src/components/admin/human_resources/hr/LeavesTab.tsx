@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { CalendarOff, Check, Plus, X } from "lucide-react";
 import GlassModal from "@/components/customcomponents/shared/GlassModal";
+import { useDialogs } from "@/components/ui/useDialogs";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
@@ -36,7 +37,7 @@ function LeaveForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <Field label="ساعت (مرخصی ساعتی)"><TextInput type="number" decimal group={false} value={f.hours} onChange={(e) => set("hours", e.target.value)} /></Field>
         </div>
         <Field label="توضیحات"><TextInput value={f.reason} onChange={(e) => set("reason", e.target.value)} /></Field>
-        <div className="flex justify-end gap-2"><GhostButton onClick={onClose}>انصراف</GhostButton><PrimaryButton type="submit" loading={busy}>ثبت</PrimaryButton></div>
+        <div className="flex justify-end gap-2"><GhostButton onClick={onClose} disabled={busy}>انصراف</GhostButton><PrimaryButton type="submit" loading={busy}>ثبت</PrimaryButton></div>
       </form>
     </GlassModal>
   );
@@ -48,8 +49,12 @@ export default function LeavesTab({ canManage }: { canManage: boolean }) {
   const list = useHrList<HRLeave>((p, s) => hrApi.leaves.list(p, s), { status, leave_type: type });
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const act = async (fn: () => Promise<unknown>) => {
-    try { setErr(null); await fn(); list.reload(); } catch (e) { setErr(errorMessage(e)); }
+  const { toast, dialog } = useDialogs();
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const act = async (id: number, fn: () => Promise<unknown>, ok: string) => {
+    if (busyId !== null) return;
+    setBusyId(id);
+    try { setErr(null); await fn(); toast(ok); list.reload(); } catch (e) { setErr(errorMessage(e)); } finally { setBusyId(null); }
   };
 
   return (
@@ -81,8 +86,8 @@ export default function LeavesTab({ canManage }: { canManage: boolean }) {
               <div className="flex items-center gap-2">
                 <Badge className={STATUS_CLASS[l.status]}>{STATUS_LABEL[l.status]}</Badge>
                 {canManage && l.status === "pending" && (<>
-                  <button title="تأیید" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600" onClick={() => act(() => hrApi.leaves.approve(l.id))}><Check size={14} /></button>
-                  <button title="رد" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600" onClick={() => act(() => hrApi.leaves.reject(l.id))}><X size={14} /></button>
+                  <button type="button" title="تأیید" aria-label="تأیید مرخصی" className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50" disabled={busyId === l.id} onClick={() => act(l.id, () => hrApi.leaves.approve(l.id), "مرخصی تأیید شد")}><Check size={14} /></button>
+                  <button type="button" title="رد" aria-label="رد مرخصی" className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-rose-600 transition hover:bg-rose-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50" disabled={busyId === l.id} onClick={() => act(l.id, () => hrApi.leaves.reject(l.id), "مرخصی رد شد")}><X size={14} /></button>
                 </>)}
               </div>
             </div>
@@ -90,7 +95,8 @@ export default function LeavesTab({ canManage }: { canManage: boolean }) {
         </div>
       )}
       <Pager page={list.page} pages={list.pages} onChange={list.setPage} />
-      {open && <LeaveForm onClose={() => setOpen(false)} onSaved={() => { setOpen(false); list.reload(); }} />}
+      {open && <LeaveForm onClose={() => setOpen(false)} onSaved={() => { setOpen(false); toast("مرخصی ثبت شد"); list.reload(); }} />}
+      {dialog}
     </div>
   );
 }

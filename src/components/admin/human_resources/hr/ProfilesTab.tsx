@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useDialogs } from "@/components/ui/useDialogs";
 import { Plus, Search, Users, Pencil, Trash2, Eye } from "lucide-react";
 import { CARD } from "@/components/ui/ds";
 import { useHrList } from "./useHrList";
@@ -16,12 +17,13 @@ export default function ProfilesTab({ canManage }: { canManage: boolean }) {
   const [form, setForm] = useState<{ open: boolean; item: HRProfile | null }>({ open: false, item: null });
   const [detail, setDetail] = useState<HRProfile | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const { confirm, toast, dialog } = useDialogs();
 
   const remove = async (p: HRProfile) => {
-    if (!confirm("این پرونده حذف شود؟")) return;
-    try { await hrApi.profiles.remove(p.id); list.reload(); } catch (e) { setErr(errorMessage(e)); }
+    if (!(await confirm({ message: "این پرونده حذف شود؟", confirmText: "حذف", danger: true }))) return;
+    try { await hrApi.profiles.remove(p.id); toast("پرونده حذف شد"); list.reload(); } catch (e) { setErr(errorMessage(e)); }
   };
-  const ib = "flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:text-indigo-600 dark:bg-white/5";
+  const ib = "flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 dark:bg-white/5";
 
   return (
     <div className="space-y-4">
@@ -54,9 +56,9 @@ export default function ProfilesTab({ canManage }: { canManage: boolean }) {
                   <p>ساعت کار روزانه: {fmtNum(p.daily_work_hours)}</p>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button className={ib} title="جزئیات" onClick={() => setDetail(p)}><Eye size={14} /></button>
-                  {canManage && <button className={ib} title="ویرایش" onClick={() => setForm({ open: true, item: p })}><Pencil size={14} /></button>}
-                  {canManage && <button className={ib} title="حذف" onClick={() => remove(p)}><Trash2 size={14} /></button>}
+                  <button type="button" aria-label="جزئیات" className={ib} title="جزئیات" onClick={() => setDetail(p)}><Eye size={14} /></button>
+                  {canManage && <button type="button" aria-label="ویرایش" className={ib} title="ویرایش" onClick={() => setForm({ open: true, item: p })}><Pencil size={14} /></button>}
+                  {canManage && <button type="button" aria-label="حذف" className={ib} title="حذف" onClick={() => remove(p)}><Trash2 size={14} /></button>}
                 </div>
               </div>
             );
@@ -68,9 +70,10 @@ export default function ProfilesTab({ canManage }: { canManage: boolean }) {
       {form.open && (
         <ProfileForm key={form.item?.id ?? "new"} open profile={form.item}
           onClose={() => setForm({ open: false, item: null })}
-          onSaved={() => { setForm({ open: false, item: null }); list.reload(); }} />
+          onSaved={() => { toast(form.item ? "پرونده به‌روز شد" : "پرونده ایجاد شد"); setForm({ open: false, item: null }); list.reload(); }} />
       )}
       {detail && <ProfileDetail profile={detail} onClose={() => setDetail(null)} onChanged={list.reload} />}
+      {dialog}
     </div>
   );
 }

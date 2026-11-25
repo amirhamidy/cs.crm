@@ -11,6 +11,7 @@ import {
 import WasteSummaryPanel from "./hr/WasteSummaryPanel";
 import { fmtNum } from "./hr/hrApi";
 import { ErrorBox, Field, PrimaryButton, Select, TextInput } from "./hr/hrUi";
+import { useDialogs } from "@/components/ui/useDialogs";
 
 interface Props {
     section?: Tab;
@@ -136,6 +137,7 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
 }
 
 function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }) {
+    const { confirm, dialog } = useDialogs();
     const [rows, setRows] = useState<HrSalary[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -158,11 +160,12 @@ function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => vo
         } catch (x) { setErr(hrErrorMessage(x)); } finally { setSaving(false); }
     };
     const del = async (id: number) => {
-        if (!confirm("این پایه حقوق حذف شود؟")) return;
+        if (!(await confirm({ message: "این پایه حقوق حذف شود؟", confirmText: "حذف", danger: true }))) return;
         try { await deleteHrSalary(id); await load(); onChange(); } catch (x) { setErr(hrErrorMessage(x)); }
     };
 
     return (
+        <>
         <div className="flex flex-col gap-5 pt-2">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="نوع پایه">
@@ -204,10 +207,13 @@ function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => vo
                 </div>
             )}
         </div>
+        {dialog}
+        </>
     );
 }
 
 function LeavesTab({ doc }: { doc: HumanResource }) {
+    const { confirm, dialog } = useDialogs();
     const [rows, setRows] = useState<HrLeave[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -238,12 +244,13 @@ function LeavesTab({ doc }: { doc: HumanResource }) {
         } catch (x) { setErr(hrErrorMessage(x)); } finally { setSaving(false); }
     };
     const del = async (id: number) => {
-        if (!confirm("این مرخصی حذف شود؟")) return;
+        if (!(await confirm({ message: "این مرخصی حذف شود؟", confirmText: "حذف", danger: true }))) return;
         try { await deleteHrLeave(id); await load(); } catch (x) { setErr(hrErrorMessage(x)); }
     };
     const d = (s: string) => new Date(s).toLocaleDateString("fa-IR");
 
     return (
+        <>
         <div className="flex flex-col gap-5 pt-2">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="نوع مرخصی">
@@ -303,6 +310,8 @@ function LeavesTab({ doc }: { doc: HumanResource }) {
                 </div>
             )}
         </div>
+        {dialog}
+        </>
     );
 }
 

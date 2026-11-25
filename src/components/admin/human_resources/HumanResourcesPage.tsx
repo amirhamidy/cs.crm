@@ -14,6 +14,7 @@ import {
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
+import { useDialogs } from "@/components/ui/useDialogs";
 
 const PAGE_SIZE = 12;
 
@@ -21,6 +22,7 @@ const GRID_CLASS =
     "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
 
 export default function HumanResourcesPage({ canManage = false }: { canManage?: boolean }) {
+    const { confirm, dialog } = useDialogs();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [departmentEmployees, setDepartmentEmployees] = useState<DepartmentEmployee[]>([]);
     const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
@@ -97,11 +99,11 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
 
     const handleDelete = useCallback(
         async (d: HumanResource) => {
-            if (!confirm(`آیا از حذف «${d.title}» مطمئن هستید؟`)) return;
+            if (!(await confirm({ message: `«${d.title}» و همه مراحل و فایل‌های آن حذف شود؟`, confirmText: "حذف", danger: true }))) return;
             await deleteDocument(d.id);
             refresh();
         },
-        [refresh]
+        [refresh, confirm]
     );
 
     const handleEdit = useCallback((d: HumanResource) => {
@@ -112,7 +114,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
     return (
         <div className="space-y-4 p-3 sm:p-5" dir="rtl">
             <motion.div
-                initial={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-[1.45rem] border border-gray-100 bg-white p-3 shadow-sm dark:border-white/[0.06] dark:bg-[#111827]"
             >
@@ -128,7 +130,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                                     {count}
                                 </span>
                             </div>
-                            <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اطلاعات و فرآیندهای منابع انسانی</p>
+                            <p className="mt-0.5 text-[10.5px] font-semibold text-gray-400">اسناد و مراحل هر پرسنل</p>
                         </div>
                     </div>
 
@@ -138,11 +140,11 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="جستجوی منابع انسانی..."
+                                placeholder="جستجو..."
                                 className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                             />
                             {search && (
-                                <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
+                                <button type="button" aria-label="پاک کردن جستجو" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
                                     <X size={11} />
                                 </button>
                             )}
@@ -165,7 +167,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                     </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-3 flex flex-wrap gap-2">
                     <div className="rounded-xl bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
                         <p className="text-[9.5px] font-semibold text-gray-400">کل منابع</p>
                         <p className="mt-0.5 text-[13px] font-extrabold text-gray-800 dark:text-white">{count}</p>
@@ -213,13 +215,13 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10">
                         {search ? <Search size={19} className="text-indigo-400" /> : <FileText size={19} className="text-indigo-400" />}
                     </div>
-                    <h3 className="text-[12.5px] font-extrabold text-gray-800 dark:text-white">منبع انسانی‌ای پیدا نشد</h3>
+                    <h3 className="text-[12.5px] font-extrabold text-gray-800 dark:text-white">موردی پیدا نشد</h3>
                     <p className="mt-1.5 max-w-xs text-[10.5px] font-semibold leading-5 text-gray-400">
                         {search
                             ? "نتیجه‌ای مطابق جستجوی شما وجود ندارد."
                             : count > 0
                                 ? "در صفحه‌ی جاری موردی برای دپارتمان‌های شما نیست؛ صفحه را تغییر دهید."
-                                : "هنوز منبع انسانی‌ای ثبت نشده است."}
+                                : "هنوز موردی ثبت نشده است."}
                     </p>
                 </motion.div>
             ) : (
@@ -265,6 +267,7 @@ export default function HumanResourcesPage({ canManage = false }: { canManage?: 
             )}
 
             <HumanResourceStepsModal open={!!stepsDocument} document={stepsDocument} canManage={canManage} onClose={() => setStepsDocument(null)} onChange={refresh} />
+            {dialog}
         </div>
     );
 }

@@ -28,6 +28,7 @@ import {
     updateStep,
     uploadStepFile,
 } from "./humanResourceApi";
+import { useDialogs } from "@/components/ui/useDialogs";
 
 interface Props {
     open: boolean;
@@ -40,6 +41,7 @@ interface Props {
 const byOrder = (a: HumanResourceStep, b: HumanResourceStep) => a.order - b.order;
 
 export default function HumanResourceStepsModal({ open, document, canManage, onClose, onChange }: Props) {
+    const { confirm, dialog } = useDialogs();
     const [steps, setSteps] = useState<HumanResourceStep[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -113,7 +115,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     };
 
     const removeStep = async (id: number) => {
-        if (!document || !confirm("آیا از حذف این مرحله مطمئن هستید؟")) return;
+        if (!document || !(await confirm({ message: "این مرحله حذف شود؟", confirmText: "حذف", danger: true }))) return;
         await deleteStep(id);
         setFilesByStep((prev) => {
             const next = { ...prev };
@@ -167,7 +169,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     };
 
     const removeStepFile = async (stepId: number, fileId: number) => {
-        if (!document || !confirm("آیا از حذف این فایل مطمئن هستید؟")) return;
+        if (!document || !(await confirm({ message: "این فایل حذف شود؟", confirmText: "حذف", danger: true }))) return;
         try {
             await deleteStepFile(document.id, stepId, fileId);
             setFilesByStep((prev) => ({
@@ -185,6 +187,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
     if (!open || !document) return null;
 
     return (
+        <>
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
@@ -425,5 +428,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                 </motion.div>
             </motion.div>
         </AnimatePresence>
+        {dialog}
+        </>
     );
 }
