@@ -222,7 +222,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                 <p className="mt-0.5 text-[11px] text-gray-400">مسیر انجام فرآیند و فایل‌های هر مرحله</p>
                             </div>
                         </div>
-                        <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
+                        <button type="button" onClick={onClose} aria-label="بستن" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition hover:text-gray-600 dark:bg-white/[0.05] dark:hover:text-gray-300">
                             <X size={15} />
                         </button>
                     </div>
@@ -333,6 +333,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => pickStepFile(step.id)}
+                                                                    aria-label="افزودن فایل به این مرحله"
                                                                     disabled={isUploading}
                                                                     title="افزودن فایل به این مرحله"
                                                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
@@ -388,6 +389,7 @@ export default function HumanResourceStepsModal({ open, document, canManage, onC
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() => removeStepFile(step.id, f.id)}
+                                                                                            aria-label="حذف فایل"
                                                                                             title="حذف فایل"
                                                                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                                                                                         >

@@ -31,7 +31,7 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
   const [busy, setBusy] = useState<number | "create" | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
-  const { confirm, dialog } = useDialogs();
+  const { confirm, toast, dialog } = useDialogs();
 
   useEffect(() => { listAll<HumanResource>(DOC_URL).then(setDocs).catch(() => setDocs([])); }, []);
 
@@ -52,14 +52,14 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
   const create = async () => {
     const [gy, gm, gd] = toGregorian(Number(year), Number(month), 1);
     setBusy("create"); setErr(null);
-    try { await hrApi.workHours.create(Number(docId), `${gy}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`); await load(); }
+    try { await hrApi.workHours.create(Number(docId), `${gy}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`); toast("گزارش ساعت کارکرد ایجاد شد"); await load(); }
     catch (e) { const m = errorMessage(e); setErr(/guild|ساعت مصوب|ساعت کار/.test(m) ? `${m} — ساعت مصوب ماهانه را از «فرم اطلاعات منابع انسانی» پرسنل تنظیم کنید.` : m); } finally { setBusy(null); }
   };
   const decide = async (r: WorkHoursReview, st: "approved" | "rejected") => {
     const ok = await confirm({ title: st === "approved" ? "تأیید گزارش" : "رد گزارش", message: st === "approved" ? "با تأیید، ساعت به‌عنوان ساعت تأییدشده ثبت می‌شود و قابل تغییر نیست." : "با رد گزارش، تصمیم نهایی می‌شود و قابل تغییر نیست.", confirmText: st === "approved" ? "تأیید" : "رد", danger: st === "rejected" });
     if (!ok) return;
     setBusy(r.id); setErr(null);
-    try { await hrApi.workHours.decide(r.id, { status: st, note: notes[r.id] ?? "" }); await load(); }
+    try { await hrApi.workHours.decide(r.id, { status: st, note: notes[r.id] ?? "" }); toast(st === "approved" ? "گزارش تأیید شد" : "گزارش رد شد"); await load(); }
     catch (e) { setErr(errorMessage(e)); } finally { setBusy(null); }
   };
 

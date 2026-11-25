@@ -137,7 +137,7 @@ function InfoTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }
 }
 
 function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => void }) {
-    const { confirm, dialog } = useDialogs();
+    const { confirm, toast, dialog } = useDialogs();
     const [rows, setRows] = useState<HrSalary[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -156,12 +156,12 @@ function SalariesTab({ doc, onChange }: { doc: HumanResource; onChange: () => vo
         try {
             await createHrSalary(doc.id, { period_type: f.period, amount: f.amount, effective_from: f.from, effective_to: null, note: f.note });
             setF({ period: f.period, amount: "", from: "", note: "" });
-            await load(); onChange();
+            await load(); onChange(); toast("پایه حقوق ثبت شد");
         } catch (x) { setErr(hrErrorMessage(x)); } finally { setSaving(false); }
     };
     const del = async (id: number) => {
         if (!(await confirm({ message: "این پایه حقوق حذف شود؟", confirmText: "حذف", danger: true }))) return;
-        try { await deleteHrSalary(id); await load(); onChange(); } catch (x) { setErr(hrErrorMessage(x)); }
+        try { await deleteHrSalary(id); await load(); onChange(); toast("پایه حقوق حذف شد"); } catch (x) { setErr(hrErrorMessage(x)); }
     };
 
     return (

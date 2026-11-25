@@ -179,6 +179,7 @@ export default function HumanResourceStepRoadmap({
                                                     <button
                                                         type="button"
                                                         onClick={() => startEdit(step)}
+                        aria-label="ویرایش مرحله"
                                                         className="flex h-5 w-5 items-center justify-center rounded-md text-gray-400 transition hover:bg-indigo-50 hover:text-indigo-500 dark:hover:bg-indigo-500/10"
                                                     >
                                                         <Pencil size={10} />
@@ -186,6 +187,7 @@ export default function HumanResourceStepRoadmap({
                                                     <button
                                                         type="button"
                                                         onClick={() => onDelete?.(step.id)}
+                        aria-label="حذف مرحله"
                                                         className="flex h-5 w-5 items-center justify-center rounded-md text-gray-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                                                     >
                                                         <Trash2 size={10} />
@@ -209,6 +211,7 @@ export default function HumanResourceStepRoadmap({
                                                 <button
                                                     type="button"
                                                     onClick={() => commitEdit(step)}
+                    aria-label="ذخیره مرحله"
                                                     disabled={isSaving}
                                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50"
                                                 >
@@ -221,6 +224,7 @@ export default function HumanResourceStepRoadmap({
                                                 <button
                                                     type="button"
                                                     onClick={cancelEdit}
+                    aria-label="انصراف از ویرایش"
                                                     disabled={isSaving}
                                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-white/[0.06] dark:text-gray-400"
                                                 >
