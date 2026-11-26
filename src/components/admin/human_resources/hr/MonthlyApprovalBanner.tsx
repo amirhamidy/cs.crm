@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Calendar, Check, Loader2, X } from "lucide-react";
 import { todayJalali, toPersianDigits, toGregorian } from "@/lib/jalali";
 import { ErrorBox, GhostButton, PrimaryButton, TextInput } from "./hrUi";
-import { WH_LABEL, WH_CLS, monthLabel } from "./workHoursShared";
+import { WH_LABEL, WH_CLS, monthLabel, canDecideMonth, decisionLockMessage } from "./workHoursShared";
 import { useDialogs } from "@/components/ui/useDialogs";
 import { hrApi, errorMessage, fmtNum, type WorkHoursReview, type WorkHoursStatus } from "./hrApi";
 
@@ -50,6 +50,7 @@ export default function MonthlyApprovalBanner({ docs, onComplete }: Props) {
   }, [expanded, docs, prevMonthIso]);
 
   const decide = async (r: WorkHoursReview, status: "approved" | "rejected") => {
+    if (!canDecideMonth(r.month)) { setErr(decisionLockMessage(r.month)); return; }
     const ok = await confirm({
       title: status === "approved" ? "تأیید" : "رد",
       message:
@@ -74,6 +75,7 @@ export default function MonthlyApprovalBanner({ docs, onComplete }: Props) {
   };
 
   const bulkApprove = async () => {
+    if (!canDecideMonth(prevMonthIso)) { setErr(decisionLockMessage(prevMonthIso)); return; }
     const ok = await confirm({
       title: "تأیید دسته‌جمعی",
       message: `${toPersianDigits(String(reviews.length))} گزارش را تأیید می‌کنید؟`,
@@ -143,7 +145,7 @@ export default function MonthlyApprovalBanner({ docs, onComplete }: Props) {
           </div>
         </div>
         <div className="flex gap-2">
-          {reviews.length > 1 && (
+          {reviews.length > 1 && canDecideMonth(prevMonthIso) && (
             <button
               onClick={bulkApprove}
               className="flex h-10 items-center gap-2 rounded-full bg-emerald-600 px-5 text-[12px] font-extrabold text-white hover:bg-emerald-700"
@@ -193,11 +195,12 @@ export default function MonthlyApprovalBanner({ docs, onComplete }: Props) {
                   </td>
                   <td className={td}>
                     <div className="flex gap-2">
-                      <GhostButton disabled={busy === r.id} onClick={() => decide(r, "rejected")}>
+                      <GhostButton disabled={busy === r.id || !canDecideMonth(r.month)} onClick={() => decide(r, "rejected")}>
                         <X size={13} /> رد
                       </GhostButton>
                       <button
-                        disabled={busy === r.id}
+                        disabled={busy === r.id || !canDecideMonth(r.month)}
+                        title={canDecideMonth(r.month) ? undefined : decisionLockMessage(r.month)}
                         onClick={() => decide(r, "approved")}
                         className="flex h-9 items-center gap-1 rounded-full bg-emerald-600 px-4 text-[12px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >

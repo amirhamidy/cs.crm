@@ -369,16 +369,13 @@ export default function WarehouseEmployeeStockLedger({
             className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]"
         >
             <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-950">
-                <div className="relative">
-                    <Search
-                        size={16}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
+                <div className="relative min-w-0 w-full sm:w-64 sm:flex-none">
+                    <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         value={list.search}
                         onChange={(e) => list.setSearch(e.target.value)}
                         placeholder="جستجوی محصول..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pr-9 pl-3 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-indigo-500"
+                        className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                     />
                 </div>
 

@@ -75,7 +75,7 @@ function unwrapList<T>(data: T[] | { results: T[] }): T[] {
     return Array.isArray(data) ? data : data.results ?? [];
 }
 
-export default function UserTasksKanban() {
+export default function UserTasksKanban({ deptId, onSelectDept }: { deptId?: number | null; onSelectDept?: (id: number) => void } = {}) {
     const { employee, loading: employeeLoading } = useCurrentEmployee();
     const [tasks, setTasks] = useState<UserTask[]>([]);
     const [stages, setStages] = useState<KanbanStage[]>([]);
@@ -85,7 +85,8 @@ export default function UserTasksKanban() {
     const [loading, setLoading] = useState(true);
     const [stagesLoading, setStagesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeDeptId, setActiveDeptId] = useState<number | null>(null);
+    const [localDeptId, setActiveDeptId] = useState<number | null>(null);
+    const activeDeptId = deptId !== undefined && deptId !== null ? deptId : localDeptId;
     const [activeMobileStageId, setActiveMobileStageId] = useState<number | null>(null);
     const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -216,9 +217,10 @@ export default function UserTasksKanban() {
     useEffect(() => {
         if (!departmentGroups.length) return setActiveDeptId(null);
         if (activeDeptId === null || !departmentGroups.some((g) => g.id === activeDeptId)) {
-            setActiveDeptId(departmentGroups[0].id);
+            if (onSelectDept) onSelectDept(departmentGroups[0].id);
+            else setActiveDeptId(departmentGroups[0].id);
         }
-    }, [departmentGroups, activeDeptId]);
+    }, [departmentGroups, activeDeptId, onSelectDept]);
 
     const activeGroup = departmentGroups.find((g) => g.id === activeDeptId) ?? null;
     const grouped = useMemo(() => groupTasksByStep(activeGroup?.tasks ?? []), [activeGroup]);
@@ -295,7 +297,7 @@ export default function UserTasksKanban() {
                 {departmentGroups.map((group) => {
                     const active = group.id === activeDeptId;
                     return (
-                        <button key={group.id} type="button" onClick={() => setActiveDeptId(group.id)} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11.5px] font-bold" style={{ background: active ? group.accent : `${group.accent}0f`, borderColor: active ? group.accent : `${group.accent}30`, color: active ? "#fff" : group.accent }}>
+                        <button key={group.id} type="button" onClick={() => (onSelectDept ? onSelectDept(group.id) : setActiveDeptId(group.id))} className="flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-[11.5px] font-bold" style={{ background: active ? group.accent : `${group.accent}0f`, borderColor: active ? group.accent : `${group.accent}30`, color: active ? "#fff" : group.accent }}>
                             <Building2 size={12} />{group.name}<span className="rounded-full px-1.5 py-0.5 text-[10px]" style={{ background: active ? "rgba(255,255,255,.25)" : `${group.accent}18` }}>{group.tasks.length}</span>
                         </button>
                     );

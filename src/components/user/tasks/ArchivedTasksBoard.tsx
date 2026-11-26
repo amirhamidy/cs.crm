@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { departmentsApi } from "@/lib/api";
 import Pagination from "@/components/ui/Pagination";
 import CardSkeletonGrid from "@/components/ui/CardSkeletonGrid";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
@@ -27,8 +28,31 @@ const ARCHIVE_PAGE_SIZE = 12;
 /** اگر بک‌اند فیلتر department_id/status را اعمال نکند، خودکار به «حالت امن» می‌رود. */
 let archiveSafeMode = false;
 
-export default function ArchivedTasksBoard() {
-    const { departments, departmentIds, loading: employeeLoading, error: employeeError } = useCurrentEmployee();
+export default function ArchivedTasksBoard({ admin = false }: { admin?: boolean } = {}) {
+    const me = useCurrentEmployee();
+    const [adminDepts, setAdminDepts] = useState<{ id: number; name: string; isManager: boolean }[]>([]);
+    const [adminLoading, setAdminLoading] = useState(admin);
+    useEffect(() => {
+        if (!admin) return;
+        let alive = true;
+        departmentsApi
+            .list()
+            .then((r) => {
+                if (alive)
+                    setAdminDepts(
+                        (r as unknown as { id: number; name: string }[]).map((d) => ({ id: d.id, name: d.name, isManager: true })),
+                    );
+            })
+            .catch(() => {})
+            .finally(() => alive && setAdminLoading(false));
+        return () => {
+            alive = false;
+        };
+    }, [admin]);
+    const departments = admin ? adminDepts : me.departments;
+    const departmentIds = admin ? adminDepts.map((d) => d.id) : me.departmentIds;
+    const employeeLoading = admin ? adminLoading : me.loading;
+    const employeeError = admin ? null : me.error;
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>("all");
 
@@ -52,7 +76,7 @@ export default function ArchivedTasksBoard() {
                 (!status || task.status === status) &&
                 (department_id
                     ? Number(task.department_id) === department_id
-                    : allowed.includes(Number(task.department_id)));
+                    : admin || allowed.includes(Number(task.department_id)));
 
             if (!archiveSafeMode) {
                 const res = await tasksApi.archivePage<ArchiveTask>(
@@ -75,7 +99,7 @@ export default function ArchivedTasksBoard() {
         {
             pageSize: ARCHIVE_PAGE_SIZE,
             scrollTop: true,
-            enabled: !employeeLoading && !employeeError && allowed.length > 0,
+            enabled: !employeeLoading && !employeeError && (admin || allowed.length > 0),
             filters: { department_id: effectiveDepartment, status: statusFilter === "all" ? undefined : statusFilter },
         }
     );
@@ -163,7 +187,7 @@ export default function ArchivedTasksBoard() {
                                 آرشیو تسک‌ها
                             </h2>
                             <p className="mt-1 text-[10px] font-medium text-gray-400">
-                                آرشیو دپارتمان‌هایی که شما عضو آن‌ها هستید
+                                {admin ? "آرشیو تمام دپارتمان‌ها" : "آرشیو دپارتمان‌هایی که شما عضو آن‌ها هستید"}
                             </p>
                         </div>
                     </div>
@@ -187,13 +211,13 @@ export default function ArchivedTasksBoard() {
                         فیلتر آرشیو
                     </div>
 
-                    <div className="relative mb-3">
+                    <div className="relative min-w-0 w-full sm:w-64 sm:flex-none mb-3">
                         <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             value={list.search}
                             onChange={(e) => list.setSearch(e.target.value)}
                             placeholder="جستجو در عنوان، پرونده، مشتری، دپارتمان یا ایجادکننده..."
-                            className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
+                            className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                         />
                         {list.search && (
                             <button type="button" onClick={() => list.setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">
@@ -293,6 +317,7 @@ export default function ArchivedTasksBoard() {
                                     <ArchivedTaskCard
                                         key={task.id}
                                         task={task}
+                                        admin={admin}
                                         onReopened={handleReopened}
                                     />
                                 ))}

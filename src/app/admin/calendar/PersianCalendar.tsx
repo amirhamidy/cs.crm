@@ -68,7 +68,7 @@ const UPCOMING_DAYS = 60;
 const UPCOMING_LIMIT = 6;
 const weekDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const PANEL =
-    "rounded-2xl border border-slate-300/55 bg-white/70 backdrop-blur-md dark:border-white/[0.08] dark:bg-slate-900/55";
+    "rounded-2xl border border-slate-300/55 bg-white/70 dark:border-white/[0.08] dark:bg-slate-900/55";
 const CELL_GLOW =
     "hover:z-10 hover:-translate-y-0.5 hover:border-indigo-400/50 hover:bg-indigo-500/[0.06] dark:hover:bg-indigo-400/[0.08]";
 const FOCUS = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60";
@@ -670,14 +670,14 @@ export default function PersianCalendar() {
                                 </p>
                             ) : (
                                 <ul className="space-y-1.5">
-                                    {upcoming.map((item, i) => {
+                                    {upcoming.map((item) => {
                                         const style = getTypeStyle(item.event.type);
                                         return (
                                             <motion.li
                                                 key={item.key}
-                                                initial={{ opacity: 0, x: 14 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: i * 0.05, duration: 0.25, ease: "easeOut" }}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{ duration: 0.15, ease: "easeOut" }}
                                             >
                                                 <button
                                                     type="button"

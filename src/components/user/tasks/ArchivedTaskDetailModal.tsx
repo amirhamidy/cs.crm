@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axiosInstance from "@/lib/axiosInstance";
+import { resolveMediaUrl } from "@/lib/media";
 import { motion } from "framer-motion";
 import {
     Archive,
@@ -100,7 +102,29 @@ interface Props {
     onClose: () => void;
 }
 
-export default function ArchivedTaskDetailModal({ task, onClose }: Props) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Full = Record<string, any>;
+const arr = (v: unknown): any[] => (Array.isArray(v) ? v : []);
+
+export default function ArchivedTaskDetailModal({ task: summary, onClose }: Props) {
+    const [full, setFull] = useState<Full | null>(null);
+    useEffect(() => {
+        let alive = true;
+        axiosInstance
+            .get(`/tasks/api/v1/task_archive/${summary.id}/`)
+            .then((r) => alive && setFull(r.data))
+            .catch(() => {});
+        return () => {
+            alive = false;
+        };
+    }, [summary.id]);
+    const task = { ...summary, ...(full ?? {}) } as ArchiveTaskSummary & Full;
+    const steps = arr(task.department_steps_snapshot);
+    const logs = arr(task.step_logs_snapshot);
+    const files = arr(task.attachments_snapshot);
+    const people = arr(task.assigned_employees_snapshot);
+    const scores = arr(task.customer_scores_snapshot);
+
     const status = statusMeta(task.status);
     const StatusIcon = status.icon;
 
@@ -187,6 +211,88 @@ export default function ArchivedTaskDetailModal({ task, onClose }: Props) {
                     <Field icon={Flag} label="آخرین اقدام توسط" value={actor} />
                     <Field icon={Hash} label="شناسه آرشیو" value={`#${task.id}`} />
                 </div>
+
+                {task.description ? (
+                    <p className="mt-4 whitespace-pre-line rounded-2xl bg-gray-50 px-3 py-2.5 text-[11px] font-semibold leading-6 text-gray-600 dark:bg-white/[0.035] dark:text-gray-300">{task.description}</p>
+                ) : null}
+
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {task.current_step_name ? <Field icon={Flag} label="مرحله فعلی" value={task.current_step_name} /> : null}
+                    {task.customer_job_title ? <Field icon={UserRound} label="سمت مشتری" value={task.customer_job_title} /> : null}
+                    {task.task_updated_at ? <Field icon={CalendarDays} label="آخرین ویرایش" value={fmtDateTime(task.task_updated_at)} /> : null}
+                </div>
+
+                {people.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">کارمندان مسئول</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {people.map((e: any, i: number) => (
+                                <span key={e.id ?? i} className="rounded-full bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-300">{e.full_name || e.username}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {steps.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">مراحل دپارتمان</p>
+                        <ol className="space-y-1.5">
+                            {[...steps].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)).map((st: any, i: number) => (
+                                <li key={st.id ?? i} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-[10.5px] font-bold text-gray-700 dark:bg-white/[0.035] dark:text-gray-200">
+                                    <span className="text-gray-400">{(st.order ?? i + 1).toLocaleString("fa-IR")}</span>
+                                    <span>{st.name}</span>
+                                    {st.id === task.current_step_id && <span className="mr-auto text-[9px] text-indigo-500">مرحله فعلی</span>}
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
+
+                {logs.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">گزارش مراحل</p>
+                        <div className="space-y-2">
+                            {logs.map((l: any, i: number) => (
+                                <div key={l.id ?? i} className="rounded-2xl bg-gray-50 px-3 py-2.5 dark:bg-white/[0.035]">
+                                    <div className="flex items-center justify-between gap-2 text-[10.5px] font-extrabold text-gray-700 dark:text-gray-200">
+                                        <span>{l.step_name} · {l.action_display || l.action}</span>
+                                        <span className="text-[9.5px] font-bold text-gray-400">{fmtDateTime(l.created_at)}</span>
+                                    </div>
+                                    {l.note ? <p className="mt-1 whitespace-pre-line text-[10.5px] font-semibold leading-5 text-gray-500 dark:text-gray-400">{l.note}</p> : null}
+                                    {arr(l.employees).length > 0 && <p className="mt-1 text-[9.5px] font-bold text-indigo-500">{arr(l.employees).map((e: any) => e.full_name || e.username).join("، ")}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {files.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">پیوست‌ها</p>
+                        <div className="space-y-1.5">
+                            {files.map((f: any, i: number) => (
+                                <a key={f.id ?? i} href={resolveMediaUrl(f.file || f.url)} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-[10.5px] font-bold text-gray-600 hover:text-indigo-500 dark:bg-white/[0.035] dark:text-gray-300">
+                                    <FileText size={12} className="shrink-0" />
+                                    <span className="min-w-0 flex-1 truncate">{f.original_file_name || f.file_name || "فایل"}</span>
+                                    {f.uploaded_by_username ? <span className="text-[9px] text-gray-400">{f.uploaded_by_username}</span> : null}
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {scores.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-[10.5px] font-extrabold text-gray-500 dark:text-gray-400">امتیاز مشتری</p>
+                        <div className="space-y-1.5">
+                            {scores.map((sc: any, i: number) => (
+                                <div key={sc.id ?? i} className="rounded-xl bg-gray-50 px-3 py-2 text-[10.5px] font-bold text-gray-600 dark:bg-white/[0.035] dark:text-gray-300">
+                                    {typeof sc === "object" ? Object.values(sc).filter((v) => typeof v !== "object").join(" · ") : String(sc)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* تایم‌لاین */}
                 <div className="mt-5">

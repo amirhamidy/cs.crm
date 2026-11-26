@@ -263,17 +263,15 @@ export default function CreateCaseModal({
                                         transition={{ duration: 0.2 }}
                                         className="space-y-4"
                                     >
-                                        <div className="relative group">
-                                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-blue-500">
-                                                <Search size={14} />
-                                            </div>
+                                        <div className="relative min-w-0 w-full sm:w-64 sm:flex-none">
+                                            <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                             <input
                                                 autoFocus
                                                 type="text"
                                                 placeholder="جستجوی نام یا شماره تماس…"
                                                 value={customerQuery}
                                                 onChange={(e) => setCustomerQuery(e.target.value)}
-                                                className="h-11 w-full rounded-2xl border-none bg-gray-50 px-10 text-[12.5px] font-medium text-gray-900 transition-all placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-[#18181b]"
+                                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                                             />
                                         </div>
 

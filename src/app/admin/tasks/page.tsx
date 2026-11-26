@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw } from "lucide-react";
+import { Archive, Check, ClipboardList, Eye, Plus, RefreshCw, Search } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import axiosInstance from "@/lib/axiosInstance";
@@ -176,12 +176,12 @@ function AdminTasksPageContent() {
                 </div>
             </div>
 
-            <input
+            <div className="relative min-w-0 w-full sm:w-64 sm:flex-none"><Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" /><input
                 value={list.search}
                 onChange={(e) => list.setSearch(e.target.value)}
                 placeholder="جستجو در عنوان، توضیحات، پرونده، مشتری یا دپارتمان..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[12.5px] text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
-            />
+                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+            /></div>
 
             {loading && <CardSkeletonGrid count={6} />}
 

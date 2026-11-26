@@ -1,9 +1,5 @@
-import UserTasksKanban from "@/components/user/tasks/UserTasksKanban";
+import ProcessesView from "./ProcessesView";
 
 export default function TasksPage() {
-  return (
-    <div className="p-6">
-      <UserTasksKanban />
-    </div>
-  );
+  return <ProcessesView />;
 }

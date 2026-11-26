@@ -6,7 +6,7 @@ import { listAll } from "@/lib/api";
 import { JALALI_MONTHS, toGregorian, todayJalali, toPersianDigits } from "@/lib/jalali";
 import type { HumanResource } from "../humanResourceApi";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
-import { WH_LABEL, WH_CLS, monthLabel } from "./workHoursShared";
+import { WH_LABEL, WH_CLS, monthLabel, canDecideMonth, decisionLockMessage } from "./workHoursShared";
 import Pager from "./Pager";
 import MonthlyApprovalBanner from "./MonthlyApprovalBanner";
 import JalaliMonthPicker from "./JalaliMonthPicker";
@@ -71,6 +71,7 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
     catch (e) { const m = errorMessage(e); setErr(/guild|ساعت مصوب|ساعت کار/.test(m) ? `${m} — ساعت مصوب ماهانه را از «فرم اطلاعات منابع انسانی» پرسنل تنظیم کنید.` : m); } finally { setBusy(null); }
   };
   const decide = async (r: WorkHoursReview, st: "approved" | "rejected") => {
+    if (!canDecideMonth(r.month)) { setErr(decisionLockMessage(r.month)); return; }
     const ok = await confirm({ title: st === "approved" ? "تأیید گزارش" : "رد گزارش", message: st === "approved" ? "با تأیید، ساعت به‌عنوان ساعت تأییدشده ثبت می‌شود و قابل تغییر نیست." : "با رد گزارش، تصمیم نهایی می‌شود و قابل تغییر نیست.", confirmText: st === "approved" ? "تأیید" : "رد", danger: st === "rejected" });
     if (!ok) return;
     setBusy(r.id); setErr(null);
@@ -142,9 +143,10 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
                     : r.note || "—"}</td>
                   {canManage && <td className={td}>{r.status === "pending" && (
                     <div className="flex gap-2">
-                      <GhostButton disabled={busy === r.id} onClick={() => decide(r, "rejected")}><X size={13} /> رد</GhostButton>
-                      <button disabled={busy === r.id} onClick={() => decide(r, "approved")}
-                        className="flex h-9 items-center gap-1 rounded-full bg-emerald-600 px-4 text-[12px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"><Check size={13} /> تأیید</button>
+                      <GhostButton disabled={busy === r.id || !canDecideMonth(r.month)} onClick={() => decide(r, "rejected")}><X size={13} /> رد</GhostButton>
+                      <button disabled={busy === r.id || !canDecideMonth(r.month)} title={canDecideMonth(r.month) ? undefined : decisionLockMessage(r.month)} onClick={() => decide(r, "approved")}
+                        className="flex h-9 items-center gap-1 rounded-full bg-emerald-600 px-4 text-[12px] font-extrabold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"><Check size={13} /> تأیید</button>
+                      {!canDecideMonth(r.month) && <span className="self-center text-[10.5px] font-bold text-blue-600">{decisionLockMessage(r.month)}</span>}
                     </div>)}</td>}
                   <td className={td}><button onClick={() => {
                     const doc = docs.find((d) => String(d.id) === docId);

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, Eye, Trash2, X, AlertCircle } from "lucide-react";
+import { Check, Eye, Trash2, X } from "lucide-react";
 import { useHrList } from "./useHrList";
 import Pager from "./Pager";
 import { Badge, EmptyState, ErrorBox, Field, PrimaryButton, Select, TextInput } from "./hrUi";
@@ -8,7 +8,6 @@ import WasteSummaryPanel from "./WasteSummaryPanel";
 import GlassModal from "@/components/customcomponents/shared/GlassModal";
 import { useDialogs } from "@/components/ui/useDialogs";
 import { hrApi, errorMessage, fmtDate, fmtNum, type WasteDeduction, type WasteStatus } from "./hrApi";
-import { todayJalali, toJalali } from "@/lib/jalali";
 
 const LABEL: Record<WasteStatus, string> = { pending: "در انتظار تصمیم", approved: "تأییدشده", waived: "کسر نشد" };
 const CLS: Record<WasteStatus, string> = {
@@ -17,28 +16,11 @@ const CLS: Record<WasteStatus, string> = {
   waived: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300",
 };
 
-// Rule: a record dated in Jalali month M can be decided only from day 1 of month M+1.
-// e.g. any date in Azar 1405 -> approval from 1 Dey 1405.
-// Record dates from the API are Gregorian (YYYY-MM-DD) and converted to Jalali here.
-function approvalOpensAt(recordDate: string): [number, number] | null {
-  const m = recordDate?.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return null;
-  const [jy, jm] = toJalali(+m[1], +m[2], +m[3]);
-  return jm === 12 ? [jy + 1, 1] : [jy, jm + 1];
-}
-function canApproveByDate(recordDate: string): boolean {
-  const open = approvalOpensAt(recordDate);
-  if (!open) return true;
-  const [ty, tm] = todayJalali();
-  return ty * 12 + tm >= open[0] * 12 + open[1];
-}
-
 function Detail({ row, canManage, onClose, onSaved }: { row: WasteDeduction; canManage: boolean; onClose: () => void; onSaved: () => void }) {
   const [amount, setAmount] = useState(String(Number(row.deduction_amount)));
   const [note, setNote] = useState(row.note || "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const approvalAllowed = canApproveByDate(row.date);
   const save = async (status?: WasteStatus) => {
     setBusy(true); setErr(null);
     try {
@@ -63,17 +45,11 @@ function Detail({ row, canManage, onClose, onSaved }: { row: WasteDeduction; can
         </>)}
         <details className="rounded-xl border border-gray-100 p-3 dark:border-white/[0.07]"><summary className="cursor-pointer text-[12px] font-extrabold">خلاصه کسر ضایعات این فرد</summary><div className="pt-3"><WasteSummaryPanel documentId={row.document_id} /></div></details>
         {canManage && (<>
-          {!approvalAllowed && (
-            <div className="flex items-start gap-2 rounded-xl bg-blue-50 p-3 text-[11px] font-bold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <p>تأیید کسرهای هر ماه فقط از روز اول ماه بعد ممکن است. برای مثال، ردیف‌های آذر را از ۱ دی به بعد می‌توان تأیید کرد.</p>
-            </div>
-          )}
           <div className="flex flex-wrap justify-end gap-2">
             <button onClick={onClose} className="flex h-9 items-center gap-1 rounded-full bg-gray-100 px-4 text-[12px] font-extrabold text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15">بستن</button>
             <button onClick={() => save()} className="flex h-9 items-center gap-1 rounded-full bg-gray-100 px-4 text-[12px] font-extrabold text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15">ذخیره مبلغ</button>
-            <button disabled={!approvalAllowed} onClick={() => save("waived")} className="flex h-9 items-center gap-1 rounded-full bg-gray-100 px-4 text-[12px] font-extrabold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15">کسر نشود</button>
-            <PrimaryButton loading={busy} disabled={!approvalAllowed} onClick={() => save("approved")}>کسر شود</PrimaryButton>
+            <button onClick={() => save("waived")} className="flex h-9 items-center gap-1 rounded-full bg-gray-100 px-4 text-[12px] font-extrabold text-gray-700 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15">کسر نشود</button>
+            <PrimaryButton loading={busy} onClick={() => save("approved")}>کسر شود</PrimaryButton>
           </div>
         </>)}
       </div>
@@ -92,10 +68,6 @@ export default function PersonnelWastePanel({ documentId, canManage }: { documen
   const [busyId, setBusyId] = useState<number | null>(null);
   const { toast, dialog } = useDialogs();
   const quick = async (r: WasteDeduction, st: WasteStatus) => {
-    if (!canApproveByDate(r.date)) {
-      setErr("تأیید این کسر هنوز امکان‌پذیر نیست. تأیید کسرهای هر ماه فقط از روز اول ماه بعد ممکن است.");
-      return;
-    }
     setBusyId(r.id);
     try { setErr(null); await hrApi.wasteDeductions.update(r.id, { status: st }); toast(st === "approved" ? "کسر تأیید شد" : "کسر لغو شد"); list.reload(); } catch (e) { setErr(errorMessage(e)); } finally { setBusyId(null); }
   };
@@ -151,17 +123,14 @@ export default function PersonnelWastePanel({ documentId, canManage }: { documen
                       <button onClick={() => setSel(r)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5" title="جزئیات">
                         <Eye size={13} />
                       </button>
-                      {canManage && r.status === "pending" && (() => {
-                        const allowed = canApproveByDate(r.date);
-                        return (<>
-                          <button disabled={busyId === r.id || !allowed} onClick={() => quick(r, "waived")} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/5" title={allowed ? "کسر نشود" : "تأیید هنوز امکان‌پذیر نیست"}>
-                            <X size={13} />
-                          </button>
-                          <button disabled={busyId === r.id || !allowed} onClick={() => quick(r, "approved")} className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-emerald-500/10" title={allowed ? "کسر شود" : "تأیید هنوز امکان‌پذیر نیست"}>
-                            <Check size={13} />
-                          </button>
-                        </>);
-                      })()}
+                      {canManage && r.status === "pending" && (<>
+                        <button disabled={busyId === r.id} onClick={() => quick(r, "waived")} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-white/5" title="کسر نشود">
+                          <X size={13} />
+                        </button>
+                        <button disabled={busyId === r.id} onClick={() => quick(r, "approved")} className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-500/10" title="کسر شود">
+                          <Check size={13} />
+                        </button>
+                      </>)}
                     </div>
                   </td>
                 </tr>

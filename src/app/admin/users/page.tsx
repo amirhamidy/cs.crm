@@ -268,14 +268,14 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="relative">
+                    <div className="relative min-w-0 w-full sm:w-64 sm:flex-none">
                         <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             value={list.search}
                             onChange={(event) => list.setSearch(event.target.value)}
                             placeholder="جستجوی کاربر..."
-                            className="h-10 w-40 rounded-2xl border-0 pl-3 pr-9 text-[12.5px] outline-none sm:w-52"
+                            className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                             style={{
                                 background: isDark ? "rgba(255,255,255,0.05)" : "rgba(15,23,42,0.05)",
                                 color: isDark ? "#e2e8f0" : "#0f172a",

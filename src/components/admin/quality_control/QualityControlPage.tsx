@@ -197,13 +197,13 @@ export default function QualityControlPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                        <div className="relative min-w-0 w-full sm:w-64 sm:flex-none">
                             <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="جستجوی محصول، شناسه یا بررسی‌کننده..."
-                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pl-9 pr-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-blue-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
+                                className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                             />
                             {search && (
                                 <button type="button" onClick={() => setSearch("")} className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:text-gray-600">

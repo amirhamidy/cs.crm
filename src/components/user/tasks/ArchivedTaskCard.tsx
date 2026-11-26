@@ -41,6 +41,7 @@ interface DepartmentEmployee {
 interface Props {
     task: ArchiveTask;
     onReopened: (taskId: number) => void;
+    admin?: boolean;
 }
 
 function formatDate(value?: string | null) {
@@ -100,12 +101,11 @@ function parseError(error: unknown) {
         : String(first ?? "بازگردانی تسک با خطا مواجه شد");
 }
 
-export default function ArchivedTaskCard({ task, onReopened }: Props) {
-    const {
-        departments,
-        loading: employeeLoading,
-        error: employeeError,
-    } = useCurrentEmployee();
+export default function ArchivedTaskCard({ task, onReopened, admin = false }: Props) {
+    const me = useCurrentEmployee();
+    const departments = me.departments;
+    const employeeLoading = admin ? false : me.loading;
+    const employeeError = admin ? null : me.error;
 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -121,12 +121,13 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
     // Only managers of THIS task's own department can reopen it
     const isManagerOfTaskDepartment = useMemo(
         () =>
+            admin ||
             departments.some(
                 (d) =>
                     d.isManager === true &&
                     Number(d.id) === Number(task.department_id),
             ),
-        [departments, task.department_id],
+        [admin, departments, task.department_id],
     );
 
     const canReopen = isManagerOfTaskDepartment;

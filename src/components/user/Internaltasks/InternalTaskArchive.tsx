@@ -95,18 +95,15 @@ export default function InternalTaskArchive() {
 
             {/* جستجو (سمت سرور) */}
             <div className="rounded-3xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.025]">
-                <div className="relative">
-                    <Search
-                        size={16}
-                        className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
+                <div className="relative min-w-0 w-full sm:w-64 sm:flex-none">
+                    <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
 
                     <input
                         type="text"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="جستجو بر اساس عنوان، شماره یا نام فرد"
-                        className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 pr-10 pl-4 text-[12.5px] font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500/40 focus:bg-white dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.04]"
+                        className="h-9 w-full rounded-full border border-gray-100 bg-gray-50 pr-9 pl-9 text-[11px] font-semibold text-gray-800 outline-none transition focus:border-indigo-400 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-white"
                     />
 
                     {hasSearch && (
