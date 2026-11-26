@@ -5,7 +5,7 @@ import { CalendarSkeleton } from "@/components/ui/skeletons";
 import dynamic from "next/dynamic";
 
 
-const PersianCalendar = dynamic(() => import("@/modules/calendar/ui/admin/PersianCalendar"), {
+const PersianCalendar = dynamic(() => import("@/modules/calendar/ui/shared/PersianCalendar"), {
   ssr: false,
   loading: () => <CalendarSkeleton />,
 });
@@ -17,7 +17,7 @@ export default function CalendarPage() {
         <CalendarSkeleton />
       }
     >
-      <PersianCalendar />
+      <PersianCalendar role="admin" />
     </Suspense>
   );
 }

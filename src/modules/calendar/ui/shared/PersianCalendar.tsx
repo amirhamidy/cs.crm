@@ -3,21 +3,24 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, MotionConfig, m } from "framer-motion";
 import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Plus, StickyNote } from "lucide-react";
-import api from "@/lib/axiosInstance";
-import { listAll } from "@/lib/api/index";
+import { useQueryClient } from "@tanstack/react-query";
+import { notesFromEvents } from "../../api/calendar.api";
+import { useCalendarEvents } from "../../queries/useCalendarEvents";
+import { calendarKeys } from "../../queries/calendar.keys";
 import { toJalali, toGregorian, jalaliMonthLength, jalaliWeekday, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import CalendarNoteModal, {
     CalendarNote,
-    CalendarEvent,
-    CalendarResponse,
     IRAN_HOLIDAYS_1405,
     getEventType,
     getNoteDate,
+    toLocalDayKey,
+    type CalendarRole,
     getTypeLabel,
     getTypeStyle,
     isEventOnDate,
     isFriday,
 } from "./CalendarNoteModal";
+import type { CalendarEvent } from "../../api/types";
 type CalendarView = "month" | "season";
 interface DayInfo {
     date: Date;
@@ -270,7 +273,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         </section>
     );
 });
-export default function PersianCalendar() {
+export default function PersianCalendar({ role = "admin" }: { role?: CalendarRole }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -282,12 +285,6 @@ export default function PersianCalendar() {
     );
     const [view, setView] = useState<CalendarView>("month");
     const [dir, setDir] = useState<1 | -1>(1);
-    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-    const [calendarRange, setCalendarRange] = useState<CalendarResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [upcomingRaw, setUpcomingRaw] = useState<CalendarEvent[]>([]);
-    const [upcomingLoading, setUpcomingLoading] = useState(true);
-    const [notes, setNotes] = useState<CalendarNote[]>([]);
     const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(() => new Set());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -325,65 +322,24 @@ export default function PersianCalendar() {
     }, [currentJy, currentJm, view]);
     const startISO = visibleMonths[0]?.startISO ?? "";
     const endISO = visibleMonths[visibleMonths.length - 1]?.endISO ?? "";
-    useEffect(() => {
-        let cancelled = false;
-        listAll<CalendarNote>("/note/api/v1/")
-            .then((all) => {
-                if (!cancelled) setNotes(all);
-            })
-            .catch((error) => console.error("Notes fetch error:", error));
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-    useEffect(() => {
-        if (!startISO || !endISO) return;
-        let cancelled = false;
-        setLoading(true);
-        api
-            .get<CalendarResponse>(`/appraisal/api/v1/calendar/?start=${startISO}&end=${endISO}`)
-            .then((res) => {
-                if (cancelled) return;
-                const data = res.data;
-                const events = Array.isArray(data?.events) ? data.events : [];
-                setCalendarRange({ start: data?.start ?? startISO, end: data?.end ?? endISO, events });
-                setCalendarEvents(events);
-            })
-            .catch((error) => {
-                if (cancelled) return;
-                console.error("Calendar fetch error:", error);
-                setCalendarRange(null);
-                setCalendarEvents([]);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [startISO, endISO]);
-    useEffect(() => {
-        let cancelled = false;
+    const queryClient = useQueryClient();
+    const upcomingEndISO = useMemo(() => {
         const end = new Date(today);
         end.setDate(end.getDate() + UPCOMING_DAYS);
-        api
-            .get<CalendarResponse>(
-                `/appraisal/api/v1/calendar/?start=${todayISO}&end=${toISODate(end)}`
-            )
-            .then((res) => {
-                if (cancelled) return;
-                setUpcomingRaw(Array.isArray(res.data?.events) ? res.data.events : []);
-            })
-            .catch((error) => {
-                if (!cancelled) console.error("Upcoming fetch error:", error);
-            })
-            .finally(() => {
-                if (!cancelled) setUpcomingLoading(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [today, todayISO]);
+        return toISODate(end);
+    }, [today]);
+    const rangeQuery = useCalendarEvents(startISO, endISO);
+    const upcomingQuery = useCalendarEvents(todayISO, upcomingEndISO);
+    const calendarRange = rangeQuery.data ?? null;
+    const calendarEvents = calendarRange?.events ?? EMPTY_EVENTS;
+    const upcomingRaw = upcomingQuery.data?.events ?? EMPTY_EVENTS;
+    const loading = rangeQuery.isLoading;
+    const upcomingLoading = upcomingQuery.isLoading;
+    const notes = useMemo(() => notesFromEvents(calendarEvents) as CalendarNote[], [calendarEvents]);
+    const refreshCalendar = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: calendarKeys.all }),
+        [queryClient]
+    );
     const mergedEvents = useMemo(() => {
         const map = new Map<string, CalendarEvent>();
         calendarEvents.forEach((e) => map.set(`${e.type}-${e.id}`, e));
@@ -395,6 +351,20 @@ export default function PersianCalendar() {
     }, [calendarEvents, upcomingRaw]);
     useEffect(() => {
         if (loading) return;
+        const dateParam = searchParams.get("date");
+        if (dateParam) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateParam);
+            if (!m) return;
+            const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            if (Number.isNaN(date.getTime())) return;
+            const [jy, jm] = toJalaliParts(date);
+            setView("month");
+            setCurrentMonthDate(jalaliToDate(jy, jm, 1));
+            setSelectedDate(date);
+            setIsModalOpen(true);
+            router.replace(pathname, { scroll: false });
+            return;
+        }
         const eventParam = searchParams.get("event");
         const noteParam = searchParams.get("note");
         if (!eventParam && !noteParam) return;
@@ -434,8 +404,8 @@ export default function PersianCalendar() {
         if (!startISO || !endISO) return map;
         for (const event of filteredEvents) {
             if (!event.start) continue;
-            const s = event.start.slice(0, 10);
-            const rawEnd = (event.end || event.start).slice(0, 10);
+            const s = toLocalDayKey(event.start);
+            const rawEnd = toLocalDayKey(event.end || event.start);
             const e = rawEnd < s ? s : rawEnd;
             const from = s > startISO ? s : startISO;
             const to = e < endISO ? e : endISO;
@@ -476,8 +446,8 @@ export default function PersianCalendar() {
         for (const event of upcomingRaw) {
             if (!event.start) continue;
             if (hiddenTypes.has(getEventType(event.type))) continue;
-            const startDay = event.start.slice(0, 10);
-            const endDay = (event.end || event.start).slice(0, 10);
+            const startDay = toLocalDayKey(event.start);
+            const endDay = toLocalDayKey(event.end || event.start);
             if (endDay < todayISO) continue;
             const key = `${event.type}-${event.id}`;
             if (seen.has(key)) continue;
@@ -972,13 +942,14 @@ export default function PersianCalendar() {
                 </div>
             </div>
             <CalendarNoteModal
+                role={role}
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 selectedDate={selectedDate}
                 notes={notes}
                 events={mergedEvents}
-                onCreated={(note) => setNotes((prev) => [note, ...prev])}
-                onDeleted={(id) => setNotes((prev) => prev.filter((note) => note.id !== id))}
+                onCreated={refreshCalendar}
+                onDeleted={refreshCalendar}
             />
         </MotionConfig>
     );

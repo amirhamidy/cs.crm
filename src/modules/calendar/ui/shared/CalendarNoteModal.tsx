@@ -8,27 +8,8 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 
 import { BusyContent } from "@/components/ui/Button";
-export interface CalendarPerson {
-    id: number;
-    full_name: string;
-}
-export interface CalendarPeople {
-    assigned_employee?: CalendarPerson[];
-    created_by?: CalendarPerson | null;
-}
-export interface CalendarEvent {
-    id: number;
-    title: string;
-    start: string;
-    end: string;
-    type: string;
-    people?: CalendarPeople | null;
-}
-export interface CalendarResponse {
-    start: string;
-    end: string;
-    events: CalendarEvent[];
-}
+import type { CalendarEvent, CalendarResponse } from "../../api/types";
+export type { CalendarEvent, CalendarResponse };
 export interface CalendarNote {
     id: number;
     user?: number;
@@ -36,7 +17,9 @@ export interface CalendarNote {
     created_at?: string;
     updated_at?: string;
 }
+export type CalendarRole = "admin" | "user";
 interface Props {
+    role?: CalendarRole;
     isOpen: boolean;
     onClose: () => void;
     selectedDate: Date | null;
@@ -47,7 +30,14 @@ interface Props {
 }
 const pad = (v: number) => String(v).padStart(2, "0");
 const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const getNoteDate = (n: CalendarNote) => n.created_at?.slice(0, 10) ?? "";
+export const toLocalDayKey = (iso?: string | null): string => {
+    if (!iso) return "";
+    if (iso.length === 10) return iso;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+export const getNoteDate = (n: CalendarNote) => toLocalDayKey(n.created_at);
 const dayFmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" });
 const weekdayFmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { weekday: "long" });
 const monthYearFmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" });
@@ -100,8 +90,8 @@ export const getTypeStyle = (type: string): TypeStyle => EVENT_TYPE_COLOR[getEve
 export const getTypeLabel = (type: string) => EVENT_TYPE_LABEL[getEventType(type)] ?? (type || "رویداد");
 export const isEventOnDate = (event: CalendarEvent, dateISO: string) => {
     if (!event.start) return false;
-    const start = event.start.slice(0, 10);
-    const end = event.end?.slice(0, 10) ?? start;
+    const start = toLocalDayKey(event.start);
+    const end = toLocalDayKey(event.end) || start;
     return start <= dateISO && end >= dateISO;
 };
 function PersonAvatar({ name, id }: { name: string; id: number }) {
@@ -109,7 +99,7 @@ function PersonAvatar({ name, id }: { name: string; id: number }) {
     return <span title={name} className="flex h-7 w-7 select-none items-center justify-center rounded-full border-2 border-white text-[10px] font-extrabold text-white dark:border-gray-900" style={{ background: `linear-gradient(135deg, oklch(55% 0.18 ${hue}), oklch(45% 0.22 ${(hue + 30) % 360}))` }}>{name.trim().charAt(0) || "؟"}</span>;
 }
 const EMPTY_BOX = "rounded-2xl border border-dashed border-gray-300/70 bg-white/45 px-5 py-7 text-center text-[11px] font-semibold text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400";
-function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }: Omit<Props, "isOpen" | "selectedDate"> & { selectedDate: Date }) {
+function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted, role = "admin" }: Omit<Props, "isOpen" | "selectedDate"> & { selectedDate: Date }) {
     const userId = useAuthStore((state) => state.userId);
     const [description, setDescription] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -127,7 +117,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
     const selectedKey = toDateKey(selectedDate);
     const todayKey = toDateKey(new Date());
     const isPast = selectedKey < todayKey;
-    const canWrite = selectedKey === todayKey;
+    const canWrite = role === "admin" ? selectedKey === todayKey : !isPast;
     const dayNotes = useMemo(() => notes.filter((n) => getNoteDate(n) === selectedKey), [notes, selectedKey]);
     const dayEvents = useMemo(() => events.filter((e) => isEventOnDate(e, selectedKey)).sort((a, b) => a.start.localeCompare(b.start)), [events, selectedKey]);
     const friday = isFriday(selectedDate);
@@ -135,7 +125,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
     const holiday = friday || officialHoliday;
     const holidayText = friday ? "جمعه" : officialHoliday ? "تعطیل رسمی" : "";
     const nowMs = Date.now();
-    const placeholder = isPast ? "برای روزهای گذشته امکان ثبت یادداشت وجود ندارد" : canWrite ? "یادداشت امروز را بنویسید..." : "یادداشت فقط برای امروز قابل ثبت است";
+    const placeholder = isPast ? "برای روزهای گذشته امکان ثبت یادداشت وجود ندارد" : canWrite ? (role === "admin" ? "یادداشت امروز را بنویسید..." : "یادداشت را بنویسید...") : role === "admin" ? "یادداشت فقط برای امروز قابل ثبت است" : "یادداشت را بنویسید...";
     const handleSubmit = async () => {
         if (!description.trim() || !userId || submitting || !canWrite) return;
         setSubmitting(true);
@@ -199,7 +189,7 @@ function DayPanel({ onClose, selectedDate, notes, events, onCreated, onDeleted }
                                         <span className="rounded-lg bg-black/5 px-2 py-0.5 text-[9.5px] font-bold text-gray-500 dark:bg-white/5 dark:text-gray-400">#{event.id}</span>
                                     </div>
                                     <div className="mt-3 grid grid-cols-2 gap-2">
-                                        {[["شروع", event.start], ["پایان", event.end]].map(([label, value]) => <div key={label} className="flex items-center gap-2 rounded-xl bg-black/[0.04] px-2.5 py-2 dark:bg-white/[0.04]"><Clock3 size={12} className="shrink-0 text-indigo-500" /><div className="min-w-0"><p className="text-[9px] font-bold text-gray-500 dark:text-gray-400">{label}</p><p className="truncate text-[10.5px] font-bold text-gray-700 dark:text-gray-300">{formatEventDate(value)}</p></div></div>)}
+                                        {[["شروع", event.start], ["پایان", event.end ?? event.start]].map(([label, value]) => <div key={label} className="flex items-center gap-2 rounded-xl bg-black/[0.04] px-2.5 py-2 dark:bg-white/[0.04]"><Clock3 size={12} className="shrink-0 text-indigo-500" /><div className="min-w-0"><p className="text-[9px] font-bold text-gray-500 dark:text-gray-400">{label}</p><p className="truncate text-[10.5px] font-bold text-gray-700 dark:text-gray-300">{formatEventDate(value)}</p></div></div>)}
                                     </div>
                                     {(assigned.length > 0 || creator) && <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                                         {assigned.length > 0 && <div className="flex items-center gap-2"><div className="flex -space-x-2 space-x-reverse">{assigned.slice(0, 5).map((person) => <PersonAvatar key={person.id} name={person.full_name} id={person.id} />)}{assigned.length > 5 && <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[9px] font-bold text-gray-600 dark:border-gray-900 dark:bg-gray-700 dark:text-gray-200">+{(assigned.length - 5).toLocaleString("fa-IR")}</span>}</div><span className="max-w-[10rem] truncate text-[10.5px] font-bold text-gray-600 dark:text-gray-400">{assigned.map((person) => person.full_name).join("، ")}</span></div>}
