@@ -20,28 +20,9 @@ import axiosInstance from "@/lib/axiosInstance";
 import { departmentsApi } from "@/lib/api";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import AdminTaskNotesModal from "@/components/customcomponents/tasks/AdminTaskNotesModal";
+import ArchivedTaskDetailModal, { type ArchiveTaskSummary } from "./ArchivedTaskDetailModal";
 
-interface ArchiveTask {
-    id: number;
-    task_id: number;
-    title: string;
-    status: "completed" | "cancelled" | "sold";
-    case_id: number | null;
-    case_title: string;
-    customer_id: number | null;
-    customer_full_name: string;
-    department_id: number;
-    department_name: string;
-    created_by_id: number | null;
-    created_by_username: string;
-    created_by_full_name: string;
-    final_action_by_id: number | null;
-    final_action_by_username: string;
-    final_action_by_full_name: string;
-    task_created_at: string;
-    completed_at: string | null;
-    archived_at: string;
-}
+type ArchiveTask = ArchiveTaskSummary;
 
 interface DepartmentStep {
     id: number;
@@ -130,6 +111,7 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [notesOpen, setNotesOpen] = useState(false);
+    const [detailOpen, setDetailOpen] = useState(false);
     const [departmentEmployees, setDepartmentEmployees] = useState<DepartmentEmployee[]>([]);
     const [steps, setSteps] = useState<DepartmentStep[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState("");
@@ -359,6 +341,14 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                 <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3.5 dark:border-white/[0.06]">
                     <button
                         type="button"
+                        onClick={() => setDetailOpen(true)}
+                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-gray-50 text-[10.5px] font-extrabold text-gray-600 transition-colors hover:bg-gray-100 dark:bg-white/[0.04] dark:text-white/60 dark:hover:bg-white/[0.08]"
+                    >
+                        <FileText size={13} />
+                        جزئیات
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setNotesOpen(true)}
                         className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-50 text-[10.5px] font-extrabold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
                     >
@@ -381,6 +371,10 @@ export default function ArchivedTaskCard({ task, onReopened }: Props) {
                     )}
                 </div>
             </motion.article>
+
+            {detailOpen && (
+                <ArchivedTaskDetailModal task={task} onClose={() => setDetailOpen(false)} />
+            )}
 
             <AdminTaskNotesModal
                 isOpen={notesOpen}

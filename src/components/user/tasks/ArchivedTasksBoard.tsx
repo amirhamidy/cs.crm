@@ -8,28 +8,9 @@ import { Archive, CheckCircle2, Filter, Loader2, PackageCheck, Search, X, XCircl
 import { tasksApi } from "@/lib/api/tasks";
 import { useCurrentEmployee } from "@/hooks/usecurrentemployee";
 import ArchivedTaskCard from "./ArchivedTaskCard";
+import type { ArchiveTaskSummary } from "./ArchivedTaskDetailModal";
 
-interface ArchiveTask {
-    id: number;
-    task_id: number;
-    title: string;
-    status: "completed" | "cancelled" | "sold";
-    case_id: number | null;
-    case_title: string;
-    customer_id: number | null;
-    customer_full_name: string;
-    department_id: number;
-    department_name: string;
-    created_by_id: number | null;
-    created_by_username: string;
-    created_by_full_name: string;
-    final_action_by_id: number | null;
-    final_action_by_username: string;
-    final_action_by_full_name: string;
-    task_created_at: string;
-    completed_at: string | null;
-    archived_at: string;
-}
+type ArchiveTask = ArchiveTaskSummary;
 
 type StatusFilter = "all" | ArchiveTask["status"];
 type DepartmentFilter = "all" | number;
@@ -211,7 +192,7 @@ export default function ArchivedTasksBoard() {
                         <input
                             value={list.search}
                             onChange={(e) => list.setSearch(e.target.value)}
-                            placeholder="جستجو در عنوان، مشتری، دپارتمان، مرحله..."
+                            placeholder="جستجو در عنوان، پرونده، مشتری، دپارتمان یا ایجادکننده..."
                             className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-9 text-[11.5px] font-semibold text-gray-700 outline-none transition-colors focus:border-indigo-400 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200"
                         />
                         {list.search && (

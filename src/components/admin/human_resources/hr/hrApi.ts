@@ -114,8 +114,19 @@ export type WorkHoursStatus = "pending" | "approved" | "rejected";
 export interface WorkHoursReview {
   id: number; document: number; employee_id: number; employee_name: string; month: string;
   expected_hours: string; production_hours: string; approved_hours: string | null; shortage_hours: string;
+  days_count?: number;
   status: WorkHoursStatus; status_display: string; note: string;
   decided_by: number | null; decided_at: string | null; created_at: string; updated_at: string;
+}
+export interface WorkHoursDayRow {
+  id: number; review_id: number; review_status: WorkHoursStatus; date: string;
+  expected_hours: string; production_hours: string; shortage_hours: string; overtime_hours: string;
+  difference_hours: string; logs_count: number;
+}
+export interface WorkHoursDaily {
+  date_from: string; date_to: string;
+  totals: { days: number; expected_hours: string; production_hours: string; shortage_hours: string; overtime_hours: string };
+  days: WorkHoursDayRow[];
 }
 export interface WasteSummary {
   group_by: WasteGroup; date_from: string; date_to: string; employee: number | null;
@@ -157,6 +168,8 @@ export const hrApi = {
       (await axiosInstance.post<WorkHoursReview>(`/document/api/v1/${documentId}/work-hours/`, { month })).data,
     decide: async (id: number, d: { status: "approved" | "rejected"; note?: string }) =>
       (await axiosInstance.patch<WorkHoursReview>(`/document/api/v1/work-hours/${id}/`, d)).data,
+    daily: async (documentId: number, p: { month: string } | { date_from: string; date_to: string }, s?: AbortSignal) =>
+      (await axiosInstance.get<WorkHoursDaily>(`/document/api/v1/${documentId}/work-hours/daily/`, { params: p, signal: s })).data,
   },
   wasteDeductions: {
     list: (p: Q = {}, s?: AbortSignal) => page<WasteDeduction>(`/document/api/v1/waste-deductions/`, p, s),

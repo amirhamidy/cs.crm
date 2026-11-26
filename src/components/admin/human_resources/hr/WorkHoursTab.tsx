@@ -1,12 +1,14 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Check, Loader2, RefreshCw, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Loader2, RefreshCw, Shuffle, X } from "lucide-react";
 import { listAll } from "@/lib/api";
 import { JALALI_MONTHS, toGregorian, todayJalali, toPersianDigits } from "@/lib/jalali";
 import type { HumanResource } from "../humanResourceApi";
 import { Badge, EmptyState, ErrorBox, Field, GhostButton, PrimaryButton, Select, TextInput } from "./hrUi";
 import { WH_LABEL, WH_CLS, monthLabel } from "./workHoursShared";
 import Pager from "./Pager";
+import MonthlyApprovalBanner from "./MonthlyApprovalBanner";
 import JalaliMonthPicker from "./JalaliMonthPicker";
 import { useDialogs } from "@/components/ui/useDialogs";
 import { hrApi, errorMessage, fmtNum, type WorkHoursReview, type WorkHoursStatus } from "./hrApi";
@@ -16,9 +18,16 @@ const LABEL = WH_LABEL;
 const CLS = WH_CLS;
 
 export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
+  const router = useRouter();
   const [jy0, jm0] = todayJalali();
   const [docs, setDocs] = useState<HumanResource[]>([]);
   const [docId, setDocId] = useState("");
+  const pickRandom = () => {
+    if (docs.length === 0) return;
+    const idx = Math.floor(Math.random() * docs.length);
+    setDocId(String(docs[idx].id));
+    toast(`انتخاب تصادفی: ${docs[idx].employee_name || docs[idx].title}`);
+  };
   const [status, setStatus] = useState("");
   const [year, setYear] = useState(String(jy0));
   const [month, setMonth] = useState(String(jm0));
@@ -32,6 +41,12 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const { confirm, toast, dialog } = useDialogs();
+
+  // گزارش ماه انتخاب‌شده (اگر وجود داشته باشد) برای غیرفعال کردن «به‌روزرسانی» پس از تصمیم
+  const [sy, sm] = [Number(year), Number(month)];
+  const selIso = sy && sm ? (() => { const [a, b, c] = toGregorian(sy, sm, 1); return `${a}-${String(b).padStart(2, "0")}-${String(c).padStart(2, "0")}`; })() : "";
+  const selReview = items.find((r) => r.month.slice(0, 7) === selIso.slice(0, 7));
+  const locked = !!selReview && selReview.status !== "pending";
 
   useEffect(() => { listAll<HumanResource>(DOC_URL).then(setDocs).catch(() => setDocs([])); }, []);
 
@@ -67,22 +82,37 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
   const td = "px-3 py-2 text-[11.5px] font-bold text-gray-700 dark:text-gray-200";
   return (
     <div className="space-y-4" dir="rtl">
+      {canManage && docs.length > 0 && <MonthlyApprovalBanner docs={docs} onComplete={load} />}
       <div className="grid grid-cols-1 gap-3 rounded-[1.45rem] border border-gray-100 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4 dark:border-white/[0.06] dark:bg-[#111827]">
-        <Field label="پرسنل"><Select value={docId} onChange={(e) => setDocId(e.target.value)}>
-          <option value="">انتخاب کنید</option>
-          {docs.map((d) => <option key={d.id} value={d.id}>{d.employee_name || d.title}</option>)}</Select></Field>
+        <Field label="پرسنل">
+          <div className="flex gap-2">
+            <Select value={docId} onChange={(e) => setDocId(e.target.value)} className="flex-1">
+              <option value="">انتخاب کنید</option>
+              {docs.map((d) => <option key={d.id} value={d.id}>{d.employee_name || d.title}</option>)}
+            </Select>
+            <button
+              type="button"
+              onClick={pickRandom}
+              disabled={docs.length === 0}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20"
+              title="انتخاب تصادفی"
+            >
+              <Shuffle size={16} />
+            </button>
+          </div>
+        </Field>
         <Field label="وضعیت"><Select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">همه</option>
           {Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
         <Field label="از ماه"><JalaliMonthPicker value={from} onChange={setFrom} placeholder="مثلاً فروردین ۱۴۰۵" /></Field>
         <Field label="تا ماه"><JalaliMonthPicker value={to} onChange={setTo} placeholder="مثلاً اسفند ۱۴۰۵" /></Field>
         {canManage && docId && (<>
-          <Field label="ماه شمسی گزارش"><div className="flex gap-2">
-            <Select value={month} onChange={(e) => setMonth(e.target.value)}>
-              {JALALI_MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</Select>
-            <TextInput value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))} />
-          </div></Field>
-          <div className="flex items-end"><PrimaryButton loading={busy === "create"} onClick={create}>ساخت / به‌روزرسانی گزارش</PrimaryButton></div>
+          <Field label="ماه شمسی گزارش">
+            <JalaliMonthPicker value={`${year}-${String(month).padStart(2, "0")}`}
+              onChange={(v) => { const m = /^(\d{4})-(\d{1,2})$/.exec(v); if (m) { setYear(m[1]); setMonth(String(Number(m[2]))); } }}
+              placeholder="انتخاب ماه" />
+          </Field>
+          <div className="flex items-end"><PrimaryButton loading={busy === "create"} disabled={locked} onClick={create}>ساخت / به‌روزرسانی گزارش</PrimaryButton></div>
         </>)}
       </div>
       <p className="text-[10px] font-semibold text-gray-400">ساعت مصوب ماهانه (guild_work_hours) باید در پرونده کارمند تنظیم شده باشد. گزارش تصمیم‌گیری‌شده قابل تغییر نیست.</p>
@@ -91,16 +121,16 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
       {!docId ? <p className="text-[11.5px] font-bold text-gray-400">یک پرسنل انتخاب کنید.</p>
         : !loading && items.length === 0 ? <EmptyState icon={<RefreshCw size={20} />} title="گزارشی ثبت نشده است" />
         : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/[0.07]">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm dark:border-white/[0.07]">
           <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-50 dark:bg-white/5"><tr>
+            <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-white/10"><tr>
               <th className={th}>ماه</th><th className={th}>ساعت مصوب</th><th className={th}>ساعت تولید</th>
               <th className={th}>ساعت تأییدشده</th><th className={th}>کسری</th><th className={th}>وضعیت</th>
-              <th className={th}>تصمیم‌گیری</th><th className={th}>یادداشت</th>{canManage && <th className={th}>اقدام</th>}
+              <th className={th}>تصمیم‌گیری</th><th className={th}>یادداشت</th>{canManage && <th className={th}>اقدام</th>}<th className={th}>جزئیات</th>
             </tr></thead>
             <tbody>
               {items.map((r) => (
-                <tr key={r.id} className="border-t border-gray-100 dark:border-white/[0.06]">
+                <tr key={r.id} className="border-t border-gray-100 transition-colors odd:bg-white even:bg-gray-50/60 hover:bg-indigo-50/50 dark:border-white/[0.06] dark:odd:bg-transparent dark:even:bg-white/[0.02] dark:hover:bg-white/[0.05]">
                   <td className={td}>{monthLabel(r.month)}</td>
                   <td className={td}>{fmtNum(r.expected_hours)}</td><td className={td}>{fmtNum(r.production_hours)}</td>
                   <td className={td}>{r.approved_hours != null ? fmtNum(r.approved_hours) : "—"}</td>
@@ -116,6 +146,12 @@ export default function WorkHoursTab({ canManage }: { canManage: boolean }) {
                       <button disabled={busy === r.id} onClick={() => decide(r, "approved")}
                         className="flex h-9 items-center gap-1 rounded-full bg-emerald-600 px-4 text-[12px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"><Check size={13} /> تأیید</button>
                     </div>)}</td>}
+                  <td className={td}><button onClick={() => {
+                    const doc = docs.find((d) => String(d.id) === docId);
+                    const q = new URLSearchParams({ documentId: docId, month: r.month, status: r.status });
+                    if (doc) q.set("employeeName", doc.employee_name || doc.title);
+                    router.push(`/admin/human-resources/workhours/month?${q.toString()}`);
+                  }} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition hover:bg-indigo-700">دیدن اطلاعات ماه</button></td>
                 </tr>))}
             </tbody>
           </table>

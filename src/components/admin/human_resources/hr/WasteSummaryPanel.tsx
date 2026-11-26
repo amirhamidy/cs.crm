@@ -77,9 +77,9 @@ export default function WasteSummaryPanel({ documentId }: { documentId: number |
               <p className="mt-1 text-[13px] font-extrabold text-gray-800 dark:text-white">{v}</p>
             </div>))}
         </div>
-        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/[0.07]">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm dark:border-white/[0.07]">
           <table className="w-full min-w-[1200px]">
-            <thead className="bg-gray-50 dark:bg-white/5"><tr>
+            <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-white/10"><tr>
               <th className={th}>دوره</th><th className={th}>ضایعات</th><th className={th}>اضافه</th>
               <th className={th}>تأییدشده</th><th className={th}>در انتظار</th><th className={th}>کسر نشد</th>
               {monthly && <><th className={th}>حقوق پایه</th><th className={th}>خالص</th>
@@ -87,7 +87,7 @@ export default function WasteSummaryPanel({ documentId }: { documentId: number |
             </tr></thead>
             <tbody>
               {data.periods.map((p) => (
-                <Fragment key={p.key}><tr className="border-t border-gray-100 dark:border-white/[0.06]">
+                <Fragment key={p.key}><tr className="border-t border-gray-100 transition-colors odd:bg-white even:bg-gray-50/60 hover:bg-indigo-50/50 dark:border-white/[0.06] dark:odd:bg-transparent dark:even:bg-white/[0.02] dark:hover:bg-white/[0.05]">
                   <td className={td}>{toPersianDigits(p.label)}{p.needs_review > 0 && <span className="mr-1 text-amber-500">●</span>}</td>
                   <td className={td}>{fmtNum(p.waste_qty)}</td><td className={td}>{fmtNum(p.excess_qty)}</td>
                   <td className={td}>{fmtNum(p.approved_amount)}</td><td className={td}>{fmtNum(p.pending_amount)}</td>
