@@ -1,4 +1,4 @@
-export type CalendarEventType = "task" | "internal_task" | "note";
+export type CalendarEventType = "task" | "internal_task" | "internal_task_routine" | "note";
 
 export type CalendarPerson = {
     id: number;
@@ -8,14 +8,14 @@ export type CalendarPerson = {
 export type CalendarEvent = {
     id: number;
     title: string;
-    start: string; 
-    end: string;
+    start: string;
+    end: string | null;
     type: CalendarEventType;
     people: {
         assigned_employee?: CalendarPerson[];
         assigned_to?: CalendarPerson[];
         created_by?: CalendarPerson;
-    };
+    } | null;
 };
 
 export type CalendarResponse = {
