@@ -13,7 +13,7 @@ import { Department } from "@/components/admin/departments/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
 import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
-import { listAll } from "@/lib/api";
+import { fetchAllTasks } from "@/lib/api";
 
 import { BusyContent } from "@/components/ui/Button";
 interface FloatingInputProps
@@ -146,7 +146,7 @@ export default function DepartmentsPage() {
 
     const fetchTasks = async () => {
         try {
-            const all = await listAll<unknown>("/tasks/api/v1/tasks/");
+            const all = await fetchAllTasks();
             setTasks(extractTasks(all));
         } catch {
             setTasks([]);

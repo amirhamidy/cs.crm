@@ -6,7 +6,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Building2, Users, ArrowRight, AlertCircle, ListChecks } from "lucide-react";
-import { listAll } from "@/lib/api";
+import { fetchAllTasks } from "@/lib/api";
 import { BoardSkeleton, DepartmentDetailSkeleton } from "@/components/ui/skeletons";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
 import { Stage, Employee, Task } from "@/components/admin/departments/types";
@@ -46,7 +46,7 @@ function DepartmentDetailPage() {
     const fetchTasks = useCallback(async () => {
         setTasksLoading(true);
         try {
-            setTasks(await listAll<Task>("/tasks/api/v1/tasks/"));
+            setTasks((await fetchAllTasks()) as unknown as Task[]);
         } catch {
             setTasks([]);
         } finally {
