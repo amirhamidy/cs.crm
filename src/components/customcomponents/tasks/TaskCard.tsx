@@ -465,6 +465,8 @@ export default function TaskCard({
                 onClose={() => setNotesModalOpen(false)}
                 taskId={task.id}
                 taskTitle={task.title}
+          
+                taskAttachments={(task as { attachments?: unknown[] }).attachments}
             />
         </>
     );

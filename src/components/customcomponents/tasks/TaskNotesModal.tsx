@@ -1,5 +1,7 @@
 "use client";
 
+import TaskAttachmentsPanel from "@/components/customcomponents/tasks/TaskAttachmentsPanel";
+
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -57,6 +59,7 @@ interface Props {
     onClose: () => void;
     taskId: number;
     taskTitle: string;
+    taskAttachments?: unknown[];
 }
 
 
@@ -194,7 +197,7 @@ function AttachmentUploader({ employeeId, username }: { employeeId?: number; use
     );
 }
 
-export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: Props) {
+export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle, taskAttachments = [] }: Props) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -320,6 +323,8 @@ export default function TaskNotesModal({ isOpen, onClose, taskId, taskTitle }: P
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-5 py-4">
+                            <TaskAttachmentsPanel taskId={taskId} attachments={taskAttachments} isDark={isDark} />
+
                         {loading ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <Loader2 size={22} className="animate-spin text-emerald-500" />

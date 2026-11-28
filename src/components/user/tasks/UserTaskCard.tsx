@@ -934,6 +934,8 @@ export default function UserTaskCard({
                 onClose={() => setNotesOpen(false)}
                 taskId={task.id}
                 taskTitle={task.title}
+          
+                taskAttachments={task.attachments}
             />
 
             {hasCase && (

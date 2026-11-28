@@ -533,6 +533,7 @@ export default function TaskCard({
                         onClose={() => setNotesModalOpen(false)}
                         taskId={taskId}
                         taskTitle={taskTitle}
+                        taskAttachments={task.attachments}
                     />,
                     document.body
                 )}

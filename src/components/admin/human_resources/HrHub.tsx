@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarOff, Clock, FileText, Trash2, UserCog, Wallet } from "lucide-react";
+import { BarChart3, CalendarOff, FileText, UserCog, Wallet } from "lucide-react";
 import PillTabs from "@/components/ui/PillTabs";
 
 const BASE = "/admin/human-resources";
@@ -11,8 +11,7 @@ const TABS = [
     { href: `${BASE}/info`, label: "اطلاعات", icon: <UserCog size={14} /> },
     { href: `${BASE}/salaries`, label: "پایه حقوق", icon: <Wallet size={14} /> },
     { href: `${BASE}/leaves`, label: "مرخصی", icon: <CalendarOff size={14} /> },
-    { href: `${BASE}/workhours`, label: "ساعت کارکرد", icon: <Clock size={14} /> },
-    { href: `${BASE}/waste`, label: "کسر ضایعات", icon: <Trash2 size={14} /> },
+    { href: `${BASE}/performance`, label: "کارکرد کارمند", icon: <BarChart3 size={14} /> },
 ];
 
 export default function HrTabs() {

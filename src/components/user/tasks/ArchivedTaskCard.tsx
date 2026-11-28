@@ -382,6 +382,7 @@ export default function ArchivedTaskCard({ task, onReopened, admin = false }: Pr
                 onClose={() => setNotesOpen(false)}
                 taskId={task.task_id}
                 taskTitle={task.title}
+                taskAttachments={(task as { attachments?: unknown[] }).attachments}
             />
 
             {confirmOpen && (

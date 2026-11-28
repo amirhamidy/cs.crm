@@ -28,6 +28,7 @@ import Pagination from "@/components/ui/Pagination";
 import { toJalali, toPersianDigits, JALALI_MONTHS, pad2 } from "@/lib/jalali";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
 import { resolveMediaUrl } from "@/lib/media";
+import TaskAttachmentsPanel from "@/components/customcomponents/tasks/TaskAttachmentsPanel";
 
 interface TaskLogAttachment {
     id: number;
@@ -331,6 +332,7 @@ export default function TaskLogsModal({ isOpen, onClose, taskId, taskTitle }: Pr
                     </div>
 
                     <div className="flex-1 overflow-y-auto px-5 py-5">
+                        <TaskAttachmentsPanel taskId={taskId} isDark={isDark} />
                         {loading ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16">
                                 <Loader2 size={22} className="animate-spin text-indigo-500" />
