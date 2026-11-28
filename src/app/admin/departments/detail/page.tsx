@@ -9,7 +9,7 @@ import { Building2, Users, ArrowRight, AlertCircle, ListChecks } from "lucide-re
 import { fetchAllTasks } from "@/lib/api";
 import { BoardSkeleton, DepartmentDetailSkeleton } from "@/components/ui/skeletons";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
-import { Stage, Employee, Task } from "@/components/admin/departments/types";
+import { Stage, Employee, Task } from "@/modules/departments/api/types";
 import StagesPanel from "@/components/admin/departments/StagesPanel";
 import EmployeesPanel from "@/components/admin/departments/EmployeesPanel";
 import DeleteModal from "@/components/admin/departments/DeleteModal";

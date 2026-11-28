@@ -3,7 +3,7 @@
 import { AnimatePresence, m } from "framer-motion";
 import { Plus, Users, X } from "lucide-react";
 import { useState } from "react";
-import { Department, Employee } from "./types";
+import { Department, Employee } from "@/modules/departments/api/types";
 
 interface Props {
     department: Department;

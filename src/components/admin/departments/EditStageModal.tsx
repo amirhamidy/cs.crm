@@ -5,7 +5,7 @@ import { m, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { X, GitBranch, CheckCircle2 } from "lucide-react";
-import { Stage } from "./types";
+import { Stage } from "@/modules/departments/api/types";
 
 import { BusyContent } from "@/components/ui/Button";
 interface Props {

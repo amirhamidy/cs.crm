@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { Department, Employee, Stage, DepartmentAPIItem, EmployeeAPIItem, StageAPIItem, DepartmentEmployeeAPIItem } from "./types";
-import { departmentApi } from "./departmentApi";
+import { Department, Employee, Stage, DepartmentAPIItem, EmployeeAPIItem, StageAPIItem, DepartmentEmployeeAPIItem } from "@/modules/departments/api/types";
+import { departmentApi } from "@/modules/departments/api/departments.api";
 
 const ACCENTS = [
   "#3b82f6",

@@ -3,7 +3,7 @@
 import { AnimatePresence, m } from "framer-motion";
 import { Building2, Pencil, Trash2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Department } from "./types";
+import { Department } from "@/modules/departments/api/types";
 import { useState } from "react";
 
 interface Props {

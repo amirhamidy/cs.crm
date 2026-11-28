@@ -7,7 +7,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { AlarmClock, CalendarDays, CheckCircle2, Clock3, FileText, MessageSquareText, Pencil, Trash2, User, UsersRound } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { JALALI_MONTHS, pad2, toJalali, toPersianDigits } from "@/lib/jalali";
-import type { Task, TaskRelationId } from "./types";
+import type { Task, TaskRelationId } from "@/modules/departments/api/types";
 import TaskAssignees from "./TaskAssignees";
 import TimeRangeModal from "@/components/tasks/TimeRangeModal";
 import AdminTaskNotesModal from "@/components/tasks/AdminTaskNotesModal";

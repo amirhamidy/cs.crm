@@ -3,7 +3,7 @@
 import { UserRound } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useEmployeeInfo } from "@/hooks/useEmployeeInfo";
-import type { TaskAssignee, TaskRelationObject } from "./types";
+import type { TaskAssignee, TaskRelationObject } from "@/modules/departments/api/types";
 
 interface TaskAssigneesProps {
     ids: TaskAssignee | null | undefined;

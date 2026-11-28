@@ -6,7 +6,7 @@ import { Backdrop } from "@/components/ui/Backdrop";
 import { panelMotion } from "@/lib/motion";
 import { ListSkeleton } from "@/components/ui/skeletons";
 import { X, User, CheckCircle2, Search } from "lucide-react";
-import type { Department, Employee } from "./types";
+import type { Department, Employee } from "@/modules/departments/api/types";
 
 import { BusyContent } from "@/components/ui/Button";
 interface Props {

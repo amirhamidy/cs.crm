@@ -8,7 +8,7 @@ import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 
-import type { Department, Stage, Task } from "@/components/admin/departments/types";
+import type { Department, Stage, Task } from "@/modules/departments/api/types";
 import StageCard from "@/components/admin/departments/StageCard";
 import EditStageModal from "./EditStageModal";
 

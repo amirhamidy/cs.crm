@@ -6,7 +6,7 @@ import { useState } from "react";
 import { StageTasksSkeleton } from "@/components/ui/skeletons";
 import { createPortal } from "react-dom";
 import type { TaskStatus } from "@/types/task";
-import type { Stage, Task } from "./types";
+import type { Stage, Task } from "@/modules/departments/api/types";
 import TaskCard from "./TaskCard";
 
 interface StageCardProps {

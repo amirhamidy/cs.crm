@@ -9,7 +9,7 @@ import { Plus, Building2, AlertCircle, Check, X, Pencil, CheckCircle2, RefreshCw
 import { Spinner as Loader2 } from "@/components/ui/Spinner";
 import { CountSkeleton, DepartmentCardSkeleton } from "@/components/ui/skeletons";
 import { useDepartmentStore } from "@/components/admin/departments/departmentStore";
-import { Department } from "@/components/admin/departments/types";
+import { Department } from "@/modules/departments/api/types";
 import DepartmentCard from "@/components/admin/departments/DepartmentCard";
 import DeleteModal from "@/components/admin/departments/DeleteModal";
 import AddDepartmentModal from "@/components/admin/departments/AddDepartmentDrawer";
